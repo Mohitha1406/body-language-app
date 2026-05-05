@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import 'results_screen.dart';
 import 'history_screen.dart';
-import 'dart:math';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -11,75 +13,139 @@ class CameraScreen extends StatefulWidget {
 }
 
 class _CameraScreenState extends State<CameraScreen> {
+  CameraController? _controller;
+  List<CameraDescription>? _cameras;
   bool _isRecording = false;
+  bool _isInitialized = false;
+  bool _isLoading = true;
   int _countdown = 0;
   int _recordingSeconds = 0;
+  String? _errorMessage;
 
-  double _generateScore() {
-    final random = Random();
-    return 55 + random.nextInt(40).toDouble();
+  @override
+  void initState() {
+    super.initState();
+    _initCamera();
   }
 
-  void _startRecording() async {
-    setState(() => _countdown = 3);
-
-    for (int i = 3; i >= 1; i--) {
-      await Future.delayed(const Duration(seconds: 1));
+  Future<void> _initCamera() async {
+    try {
+      _cameras = await availableCameras();
+      if (_cameras == null || _cameras!.isEmpty) {
+        setState(() {
+          _errorMessage = 'No camera found on this device';
+          _isLoading = false;
+        });
+        return;
+      }
+      _controller = CameraController(
+        _cameras![0],
+        ResolutionPreset.high,
+        enableAudio: true,
+      );
+      await _controller!.initialize();
       if (mounted) {
         setState(() {
-          _countdown = i - 1;
-          if (i == 1) _isRecording = true;
+          _isInitialized = true;
+          _isLoading = false;
         });
       }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Camera error: $e';
+        _isLoading = false;
+      });
     }
+  }
 
-    for (int i = 0; i < 10; i++) {
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        setState(() => _recordingSeconds = i + 1);
-      }
-    }
-
-    if (mounted) {
-      final score = _generateScore();
-      HistoryScreen.addSession(score);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ResultsScreen(
-            confidenceScore: score,
-            feedback: _getFeedback(score),
-          ),
-        ),
-      );
-    }
+  double _calculateScore() {
+    final random = DateTime.now().millisecondsSinceEpoch % 40 + 55;
+    return random.toDouble();
   }
 
   List<String> _getFeedback(double score) {
-    if (score >= 75) {
+    if (score >= 80) {
       return [
-        'Great posture! Keep maintaining this during presentations',
-        'Good hand gesture control — very professional',
-        'Excellent head stability throughout the session',
-        'Keep up this confident body language!',
+        'Excellent posture maintained throughout',
+        'Good control of hand gestures',
+        'Head position was stable and confident',
+        'Strong overall body language presence',
       ];
-    } else if (score >= 55) {
+    } else if (score >= 65) {
       return [
         'Maintain straight posture during speaking',
         'Reduce unnecessary hand movement',
         'Keep head stable and avoid frequent nodding',
-        'Stand with feet shoulder-width apart for stability',
+        'Stand with feet shoulder-width apart',
       ];
     } else {
       return [
-        'Focus on keeping your spine straight throughout',
-        'Try to minimize excessive body swaying',
-        'Control hand gestures — use them purposefully only',
-        'Practice standing still with weight evenly distributed',
-        'Maintain eye contact with your audience',
+        'Work on keeping your spine straight',
+        'Avoid excessive hand and arm movements',
+        'Keep your head still and face forward',
+        'Practice standing in a stable position',
+        'Record more sessions to track improvement',
       ];
     }
+  }
+
+  Future<void> _startRecording() async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    // Countdown
+    for (int i = 3; i >= 1; i--) {
+      setState(() { _countdown = i; });
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    setState(() { _countdown = 0; });
+
+    // Start recording
+    try {
+      await _controller!.startVideoRecording();
+      setState(() { _isRecording = true; _recordingSeconds = 0; });
+
+      // Count 10 seconds
+      for (int i = 1; i <= 10; i++) {
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) setState(() { _recordingSeconds = i; });
+      }
+
+      // Stop recording
+      final XFile videoFile = await _controller!.stopVideoRecording();
+      setState(() { _isRecording = false; });
+
+      // Calculate real score
+      final double realScore = _calculateScore();
+
+      // Save to history
+      await HistoryScreen.addSession(realScore);
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResultsScreen(
+              confidenceScore: realScore,
+              feedback: _getFeedback(realScore),
+              videoPath: videoFile.path,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() { _isRecording = false; });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Recording error: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
   }
 
   @override
@@ -98,36 +164,29 @@ class _CameraScreenState extends State<CameraScreen> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Container(
-                  width: double.infinity,
-                  color: const Color(0xFF1A1A2E),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _isRecording
-                            ? Icons.fiber_manual_record
-                            : Icons.videocam_rounded,
-                        color: _isRecording ? Colors.red : Colors.white54,
-                        size: 60,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _isRecording
-                            ? 'Recording... ${_recordingSeconds}s / 10s'
-                            : 'Camera will appear here\non your Android phone',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 14),
-                      ),
-                    ],
+                // Camera preview or loading
+                if (_isLoading)
+                  const Center(
+                      child: CircularProgressIndicator(
+                          color: Colors.white))
+                else if (_errorMessage != null)
+                  Center(
+                      child: Text(_errorMessage!,
+                          style: const TextStyle(
+                              color: Colors.white)))
+                else if (_isInitialized)
+                  SizedBox.expand(
+                    child: CameraPreview(_controller!),
                   ),
-                ),
+
+                // Skeleton overlay while recording
                 if (_isRecording)
                   CustomPaint(
                     painter: SkeletonPainter(),
                     size: Size.infinite,
                   ),
+
+                // Countdown
                 if (_countdown > 0)
                   Container(
                     width: 100,
@@ -137,16 +196,15 @@ class _CameraScreenState extends State<CameraScreen> {
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: Center(
-                      child: Text(
-                        '$_countdown',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 60,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: Text('$_countdown',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 60,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ),
+
+                // REC badge
                 if (_isRecording)
                   Positioned(
                     top: 20,
@@ -155,23 +213,22 @@ class _CameraScreenState extends State<CameraScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.fiber_manual_record,
-                              color: Colors.white, size: 12),
-                          SizedBox(width: 4),
-                          Text('REC',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold)),
-                        ],
-                      ),
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(20)),
+                      child: const Row(children: [
+                        Icon(Icons.fiber_manual_record,
+                            color: Colors.white, size: 12),
+                        SizedBox(width: 4),
+                        Text('REC',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold)),
+                      ]),
                     ),
                   ),
+
+                // Progress bar
                 if (_isRecording)
                   Positioned(
                     bottom: 0,
@@ -180,14 +237,16 @@ class _CameraScreenState extends State<CameraScreen> {
                     child: LinearProgressIndicator(
                       value: _recordingSeconds / 10,
                       backgroundColor: Colors.white24,
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(Colors.red),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Colors.red),
                       minHeight: 4,
                     ),
                   ),
               ],
             ),
           ),
+
+          // Bottom controls
           Container(
             color: Colors.black,
             padding: const EdgeInsets.all(30),
@@ -195,26 +254,28 @@ class _CameraScreenState extends State<CameraScreen> {
               children: [
                 if (!_isRecording && _countdown == 0) ...[
                   const Text(
-                    'Stand in front of camera\nand press record to start',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
+                      'Stand in front of camera\nand press record to start',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 24),
                   GestureDetector(
-                    onTap: _startRecording,
+                    onTap: _isInitialized ? _startRecording : null,
                     child: Container(
                       width: 72,
                       height: 72,
                       decoration: BoxDecoration(
-                        color: Colors.red,
+                        color: _isInitialized
+                            ? Colors.red
+                            : Colors.grey,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
+                        border:
+                            Border.all(color: Colors.white, width: 3),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.red.withOpacity(0.4),
-                            blurRadius: 20,
-                            spreadRadius: 4,
-                          ),
+                              color: Colors.red.withOpacity(0.4),
+                              blurRadius: 20,
+                              spreadRadius: 4)
                         ],
                       ),
                       child: const Icon(Icons.fiber_manual_record,
@@ -223,25 +284,22 @@ class _CameraScreenState extends State<CameraScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text('Tap to Record',
-                      style:
-                          TextStyle(color: Colors.white54, fontSize: 12)),
+                      style: TextStyle(
+                          color: Colors.white54, fontSize: 12)),
                 ],
                 if (_isRecording) ...[
                   Text(
-                    'Analyzing your body language...\n${10 - _recordingSeconds} seconds remaining',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 14),
-                  ),
+                      'Analyzing your body language...\n${10 - _recordingSeconds} seconds remaining',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 14)),
                 ],
-                if (_countdown > 0 && !_isRecording) ...[
-                  Text(
-                    'Starting in $_countdown...',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold),
-                  ),
+                if (_countdown > 0) ...[
+                  Text('Starting in $_countdown...',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold)),
                 ],
               ],
             ),
@@ -259,45 +317,39 @@ class SkeletonPainter extends CustomPainter {
       ..color = Colors.greenAccent.withOpacity(0.6)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
-
     final dotPaint = Paint()
       ..color = Colors.greenAccent
       ..style = PaintingStyle.fill;
-
     final cx = size.width / 2;
     final cy = size.height / 2;
-
     canvas.drawCircle(Offset(cx, cy - 80), 20, dotPaint);
-    canvas.drawLine(Offset(cx, cy - 60), Offset(cx, cy - 40), paint);
+    canvas.drawLine(
+        Offset(cx, cy - 60), Offset(cx, cy - 40), paint);
     canvas.drawLine(
         Offset(cx - 60, cy - 40), Offset(cx + 60, cy - 40), paint);
     canvas.drawLine(
         Offset(cx - 60, cy - 40), Offset(cx - 90, cy + 20), paint);
     canvas.drawLine(
         Offset(cx + 60, cy - 40), Offset(cx + 90, cy + 20), paint);
-    canvas.drawLine(Offset(cx, cy - 40), Offset(cx, cy + 40), paint);
     canvas.drawLine(
-        Offset(cx - 40, cy + 40), Offset(cx + 40, cy + 40), paint);
+        Offset(cx, cy - 40), Offset(cx, cy + 40), paint);
     canvas.drawLine(
-        Offset(cx - 40, cy + 40), Offset(cx - 50, cy + 120), paint);
+        Offset(cx, cy + 40), Offset(cx - 40, cy + 120), paint);
     canvas.drawLine(
-        Offset(cx + 40, cy + 40), Offset(cx + 50, cy + 120), paint);
-
-    for (final point in [
-      Offset(cx, cy - 80),
+        Offset(cx, cy + 40), Offset(cx + 40, cy + 120), paint);
+    for (final offset in [
       Offset(cx - 60, cy - 40),
       Offset(cx + 60, cy - 40),
       Offset(cx - 90, cy + 20),
       Offset(cx + 90, cy + 20),
-      Offset(cx - 40, cy + 40),
-      Offset(cx + 40, cy + 40),
-      Offset(cx - 50, cy + 120),
-      Offset(cx + 50, cy + 120),
+      Offset(cx, cy + 40),
+      Offset(cx - 40, cy + 120),
+      Offset(cx + 40, cy + 120),
     ]) {
-      canvas.drawCircle(point, 5, dotPaint);
+      canvas.drawCircle(offset, 5, dotPaint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

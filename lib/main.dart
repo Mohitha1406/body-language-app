@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'history_screen.dart';
-import 'results_screen.dart';
 import 'camera_screen.dart';
+import 'login_screen.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+  runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+  const MyApp({super.key, required this.isLoggedIn});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +27,7 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const SplashScreen(),
+      home: isLoggedIn ? const MainScreen() : const LoginScreen(),
     );
   }
 }
@@ -73,8 +78,7 @@ class _SplashScreenState extends State<SplashScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 100,
-                height: 100,
+                width: 100, height: 100,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
@@ -86,36 +90,25 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.accessibility_new_rounded,
-                  size: 60,
-                  color: Color(0xFF1A73E8),
-                ),
+                child: const Icon(Icons.accessibility_new_rounded,
+                    size: 60, color: Color(0xFF1A73E8)),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Body Language AI',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
-                ),
-              ),
+              const Text('Body Language AI',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
               const SizedBox(height: 8),
-              const Text(
-                'Analyze. Improve. Confidence.',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                  letterSpacing: 0.5,
-                ),
-              ),
+              const Text('Analyze. Improve. Confidence.',
+                  style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      letterSpacing: 0.5)),
               const SizedBox(height: 48),
               const CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2,
-              ),
+                  color: Colors.white, strokeWidth: 2),
             ],
           ),
         ),
@@ -134,62 +127,62 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
+  final List<Widget> _screens = const [
+    HomeScreen(),
+    HistoryScreen(),
+    ProfileScreen(),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final List<Widget> screens = [
-      HomeScreen(onRefresh: () => setState(() {})),
-      const HistoryScreen(),
-      const ProfileScreen(),
-    ];
-
     return Scaffold(
-      body: screens[_currentIndex],
+      body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         selectedItemColor: const Color(0xFF1A73E8),
         unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTap: (index) => setState(() => _currentIndex = index),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
+              icon: Icon(Icons.home_rounded), label: 'Home'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.history_rounded),
-            label: 'History',
-          ),
+              icon: Icon(Icons.history_rounded), label: 'History'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
+              icon: Icon(Icons.person_rounded), label: 'Profile'),
         ],
       ),
     );
   }
 }
 
-class HomeScreen extends StatelessWidget {
-  final VoidCallback? onRefresh;
-  const HomeScreen({super.key, this.onRefresh});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
-  String get _latestScore {
-    if (HistoryScreen.sessions.isEmpty) return '-- %';
-    return '${HistoryScreen.sessions.first['score']}%';
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String _userName = 'User';
+  String _userInitials = 'U';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
   }
 
-  String get _bestScore {
-    if (HistoryScreen.sessions.isEmpty) return '--';
-    final best = HistoryScreen.sessions
-        .map((s) => s['score'] as int)
-        .reduce((a, b) => a > b ? a : b);
-    return '$best%';
+  Future<void> _loadUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name') ?? 'User';
+    setState(() {
+      _userName = name;
+      _userInitials = name.trim().split(' ')
+          .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+          .take(2)
+          .join();
+    });
   }
-
-  int get _sessionCount => HistoryScreen.sessions.length;
 
   Widget _statChip(String label, String value) {
     return Container(
@@ -206,8 +199,7 @@ class HomeScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   fontSize: 13)),
           Text(label,
-              style:
-                  const TextStyle(color: Colors.white70, fontSize: 10)),
+              style: const TextStyle(color: Colors.white70, fontSize: 10)),
         ],
       ),
     );
@@ -267,8 +259,8 @@ class HomeScreen extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Hello, Mohitha 👋',
-                          style: TextStyle(
+                      Text('Hello, $_userName 👋',
+                          style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF1A1A2E))),
@@ -278,11 +270,11 @@ class HomeScreen extends StatelessWidget {
                               fontSize: 13, color: Colors.grey[600])),
                     ],
                   ),
-                  const CircleAvatar(
-                    backgroundColor: Color(0xFF1A73E8),
+                  CircleAvatar(
+                    backgroundColor: const Color(0xFF1A73E8),
                     radius: 22,
-                    child: Text('PM',
-                        style: TextStyle(
+                    child: Text(_userInitials,
+                        style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 14)),
@@ -314,25 +306,22 @@ class HomeScreen extends StatelessWidget {
                         style: TextStyle(
                             color: Colors.white70, fontSize: 13)),
                     const SizedBox(height: 8),
-                    Text(_latestScore,
-                        style: const TextStyle(
+                    const Text('-- %',
+                        style: TextStyle(
                             color: Colors.white,
                             fontSize: 48,
                             fontWeight: FontWeight.bold)),
-                    Text(
-                        _sessionCount == 0
-                            ? 'No sessions yet — start your first analysis!'
-                            : 'Total sessions: $_sessionCount',
-                        style: const TextStyle(
+                    const Text('No sessions yet — start your first analysis!',
+                        style: TextStyle(
                             color: Colors.white70, fontSize: 12)),
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        _statChip('Sessions', '$_sessionCount'),
+                        _statChip('Sessions', '0'),
                         const SizedBox(width: 12),
-                        _statChip('Best Score', _bestScore),
+                        _statChip('Best Score', '--'),
                         const SizedBox(width: 12),
-                        _statChip('Streak', '$_sessionCount days'),
+                        _statChip('Streak', '0 days'),
                       ],
                     ),
                   ],
@@ -340,14 +329,9 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               GestureDetector(
-                onTap: () async {
-                  await Navigator.push(
-                    context,
+                onTap: () => Navigator.push(context,
                     MaterialPageRoute(
-                        builder: (_) => const CameraScreen()),
-                  );
-                  onRefresh?.call();
-                },
+                        builder: (_) => const CameraScreen())),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -364,8 +348,7 @@ class HomeScreen extends StatelessWidget {
                   child: Row(
                     children: [
                       Container(
-                        width: 52,
-                        height: 52,
+                        width: 52, height: 52,
                         decoration: BoxDecoration(
                           color: const Color(0xFF1A73E8).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(14),
@@ -419,8 +402,49 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String _userName = 'User';
+  String _userEmail = '';
+  String _userInitials = 'U';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name') ?? 'User';
+    final email = prefs.getString('user_email') ?? '';
+    setState(() {
+      _userName = name;
+      _userEmail = email;
+      _userInitials = name.trim().split(' ')
+          .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+          .take(2)
+          .join();
+    });
+  }
+
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
 
   Widget _profileStat(String value, String label) {
     return Container(
@@ -450,44 +474,42 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _settingItem(IconData icon, String title) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFF1A73E8), size: 22),
-          const SizedBox(width: 14),
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF1A1A2E))),
-          const Spacer(),
-          Icon(Icons.arrow_forward_ios_rounded,
-              size: 14, color: Colors.grey[400]),
-        ],
+  Widget _settingItem(IconData icon, String title, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: const Color(0xFF1A73E8), size: 22),
+            const SizedBox(width: 14),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF1A1A2E))),
+            const Spacer(),
+            Icon(Icons.arrow_forward_ios_rounded,
+                size: 14, color: Colors.grey[400]),
+          ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final sessionCount = HistoryScreen.sessions.length;
-    final bestScore = sessionCount == 0
-        ? '--'
-        : '${HistoryScreen.sessions.map((s) => s['score'] as int).reduce((a, b) => a > b ? a : b)}%';
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FF),
       body: SafeArea(
@@ -496,44 +518,45 @@ class ProfileScreen extends StatelessWidget {
           child: Column(
             children: [
               const SizedBox(height: 20),
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 50,
-                backgroundColor: Color(0xFF1A73E8),
-                child: Text('PM',
-                    style: TextStyle(
+                backgroundColor: const Color(0xFF1A73E8),
+                child: Text(_userInitials,
+                    style: const TextStyle(
                         color: Colors.white,
                         fontSize: 32,
                         fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 16),
-              const Text('Papudesi Mohitha',
-                  style: TextStyle(
+              Text(_userName,
+                  style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF1A1A2E))),
               const SizedBox(height: 4),
-              Text('B.Tech AI & DS · Saveetha Engineering',
-                  style:
-                      TextStyle(fontSize: 13, color: Colors.grey[600])),
+              Text(_userEmail,
+                  style: TextStyle(
+                      fontSize: 13, color: Colors.grey[600])),
               const SizedBox(height: 32),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _profileStat('$sessionCount', 'Sessions'),
-                  _profileStat(bestScore, 'Best Score'),
-                  _profileStat(
-                      '$sessionCount', 'Streak'),
+                  _profileStat('0', 'Sessions'),
+                  _profileStat('--', 'Best Score'),
+                  _profileStat('0', 'Streak'),
                 ],
               ),
               const SizedBox(height: 32),
+              _settingItem(Icons.notifications_rounded, 'Notifications'),
+              _settingItem(Icons.bar_chart_rounded, 'Progress Report'),
+              _settingItem(Icons.help_outline_rounded, 'Help & Support'),
+              _settingItem(Icons.info_outline_rounded, 'About App'),
+              const SizedBox(height: 8),
               _settingItem(
-                  Icons.notifications_rounded, 'Notifications'),
-              _settingItem(
-                  Icons.bar_chart_rounded, 'Progress Report'),
-              _settingItem(
-                  Icons.help_outline_rounded, 'Help & Support'),
-              _settingItem(
-                  Icons.info_outline_rounded, 'About App'),
+                Icons.logout_rounded,
+                'Logout',
+                onTap: _logout,
+              ),
             ],
           ),
         ),

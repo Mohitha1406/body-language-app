@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class ResultsScreen extends StatelessWidget {
   final double confidenceScore;
   final List<String> feedback;
+  final String? videoPath;
 
   const ResultsScreen({
     super.key,
     required this.confidenceScore,
     required this.feedback,
+    this.videoPath,
   });
 
   Color _getScoreColor() {
@@ -88,6 +90,30 @@ class ResultsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (videoPath != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.videocam,
+                              color: Color(0xFF10B981), size: 16),
+                          const SizedBox(width: 6),
+                          const Text('Video saved successfully',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF10B981),
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -200,8 +226,7 @@ class ResultsScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(label,
-                  style:
-                      const TextStyle(fontSize: 13, color: Colors.grey)),
+                  style: const TextStyle(fontSize: 13, color: Colors.grey)),
               Text('${(value * 100).toInt()}%',
                   style: const TextStyle(
                       fontSize: 13,
