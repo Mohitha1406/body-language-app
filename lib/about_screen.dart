@@ -111,7 +111,7 @@ class AboutScreen extends StatelessWidget {
               alignment: WrapAlignment.center,
               children: [
                 _techPill('Flutter', const Color(0xFF54C5F8)),
-                _techPill('MediaPipe', const Color(0xFF FF6F00)),
+                _techPill('MediaPipe', const Color(0xFFFF6F00)),
                 _techPill('OpenCV', const Color(0xFF5C8DFF)),
                 _techPill('Python', const Color(0xFF3776AB)),
                 _techPill('FastAPI', const Color(0xFF009688)),

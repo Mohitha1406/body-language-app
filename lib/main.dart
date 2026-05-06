@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
 import 'history_screen.dart';
 import 'camera_screen.dart';
@@ -8,6 +9,11 @@ import 'about_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(
+    url: 'https://bymsesfomceglnmxsxtz.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5bXNlc2ZvbWNlZ2xubXhzeHR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTY5MTUsImV4cCI6MjA5MzU3MjkxNX0.L0bpy3N5Uxt5geqftgvW-K9YpwAAv0n7SxbknRnjE-o',
+  );
   final prefs = await SharedPreferences.getInstance();
   final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
   runApp(MyApp(isLoggedIn: isLoggedIn));
@@ -94,8 +100,10 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ],
                 ),
-                child: const Icon(Icons.accessibility_new_rounded,
-                    size: 60, color: Color(0xFF1A73E8)),
+                child: const Icon(
+                    Icons.accessibility_new_rounded,
+                    size: 60,
+                    color: Color(0xFF1A73E8)),
               ),
               const SizedBox(height: 24),
               const Text('Body Language AI',
@@ -238,8 +246,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _statChip(String label, String value) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+          horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.15),
         borderRadius: BorderRadius.circular(20),
@@ -288,7 +296,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: Color(0xFF1A1A2E))),
                 Text(desc,
                     style: TextStyle(
-                        fontSize: 11, color: Colors.grey[600])),
+                        fontSize: 11,
+                        color: Colors.grey[600])),
               ],
             ),
           ),
@@ -394,8 +403,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          _statChip(
-                              'Sessions', '$_totalSessions'),
+                          _statChip('Sessions',
+                              '$_totalSessions'),
                           const SizedBox(width: 12),
                           _statChip(
                               'Best Score',
@@ -425,11 +434,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius:
+                          BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                            color:
-                                Colors.black.withOpacity(0.06),
+                            color: Colors.black
+                                .withOpacity(0.06),
                             blurRadius: 12,
                             offset: const Offset(0, 4)),
                       ],
@@ -461,8 +471,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       fontSize: 16,
                                       fontWeight:
                                           FontWeight.bold,
-                                      color:
-                                          Color(0xFF1A1A2E))),
+                                      color: Color(
+                                          0xFF1A1A2E))),
                               SizedBox(height: 4),
                               Text(
                                   'Record video and get confidence score',
@@ -556,12 +566,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
+    await Supabase.instance.client.auth.signOut();
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(
+            builder: (_) => const LoginScreen()),
         (route) => false,
       );
     }
@@ -661,7 +673,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 4),
               Text(_userEmail,
                   style: TextStyle(
-                      fontSize: 13, color: Colors.grey[600])),
+                      fontSize: 13,
+                      color: Colors.grey[600])),
               const SizedBox(height: 32),
               Row(
                 mainAxisAlignment:
@@ -694,7 +707,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const AboutScreen()),
+                      builder: (_) =>
+                          const AboutScreen()),
                 ),
               ),
               const SizedBox(height: 8),
