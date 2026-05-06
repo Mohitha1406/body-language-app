@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'history_screen.dart';
 import 'camera_screen.dart';
 import 'login_screen.dart';
+import 'about_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -187,7 +188,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? 'User';
-    final List<String> raw = prefs.getStringList('sessions') ?? [];
+    final List<String> raw =
+        prefs.getStringList('sessions') ?? [];
 
     int latestScore = -1;
     int bestScore = -1;
@@ -309,10 +311,12 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
                       children: [
                         Text('Hello, $_userName 👋',
                             style: const TextStyle(
@@ -320,14 +324,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF1A1A2E))),
                         const SizedBox(height: 4),
-                        Text('Ready to improve your body language?',
+                        Text(
+                            'Ready to improve your body language?',
                             style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.grey[600])),
                       ],
                     ),
                     CircleAvatar(
-                      backgroundColor: const Color(0xFF1A73E8),
+                      backgroundColor:
+                          const Color(0xFF1A73E8),
                       radius: 22,
                       child: Text(_userInitials,
                           style: const TextStyle(
@@ -343,25 +349,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF1A73E8), Color(0xFF0D47A1)],
+                      colors: [
+                        Color(0xFF1A73E8),
+                        Color(0xFF0D47A1)
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                          color:
-                              const Color(0xFF1A73E8).withOpacity(0.3),
+                          color: const Color(0xFF1A73E8)
+                              .withOpacity(0.3),
                           blurRadius: 16,
                           offset: const Offset(0, 6)),
                     ],
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
                       const Text('Your Latest Score',
                           style: TextStyle(
-                              color: Colors.white70, fontSize: 13)),
+                              color: Colors.white70,
+                              fontSize: 13)),
                       const SizedBox(height: 8),
                       Text(
                         _latestScore == -1
@@ -377,13 +388,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         _getScoreMessage(),
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 12),
+                            color: Colors.white70,
+                            fontSize: 12),
                       ),
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          _statChip('Sessions',
-                              '$_totalSessions'),
+                          _statChip(
+                              'Sessions', '$_totalSessions'),
                           const SizedBox(width: 12),
                           _statChip(
                               'Best Score',
@@ -404,7 +416,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     await Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const CameraScreen()));
+                            builder: (_) =>
+                                const CameraScreen()));
                     _loadData();
                   },
                   child: Container(
@@ -415,7 +428,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color:
+                                Colors.black.withOpacity(0.06),
                             blurRadius: 12,
                             offset: const Offset(0, 4)),
                       ],
@@ -428,10 +442,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF1A73E8)
                                 .withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius:
+                                BorderRadius.circular(14),
                           ),
-                          child: const Icon(Icons.videocam_rounded,
-                              color: Color(0xFF1A73E8), size: 28),
+                          child: const Icon(
+                              Icons.videocam_rounded,
+                              color: Color(0xFF1A73E8),
+                              size: 28),
                         ),
                         const SizedBox(width: 16),
                         const Expanded(
@@ -442,8 +459,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               Text('Start New Analysis',
                                   style: TextStyle(
                                       fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1A1A2E))),
+                                      fontWeight:
+                                          FontWeight.bold,
+                                      color:
+                                          Color(0xFF1A1A2E))),
                               SizedBox(height: 4),
                               Text(
                                   'Record video and get confidence score',
@@ -453,8 +472,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios_rounded,
-                            color: Colors.grey, size: 16),
+                        const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.grey,
+                            size: 16),
                       ],
                     ),
                   ),
@@ -507,7 +528,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? 'User';
     final email = prefs.getString('user_email') ?? '';
-    final List<String> raw = prefs.getStringList('sessions') ?? [];
+    final List<String> raw =
+        prefs.getStringList('sessions') ?? [];
 
     int bestScore = -1;
     if (raw.isNotEmpty) {
@@ -547,8 +569,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _profileStat(String value, String label) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.symmetric(
+          horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -568,8 +590,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: Color(0xFF1A73E8))),
           const SizedBox(height: 4),
           Text(label,
-              style:
-                  TextStyle(fontSize: 11, color: Colors.grey[600])),
+              style: TextStyle(
+                  fontSize: 11, color: Colors.grey[600])),
         ],
       ),
     );
@@ -594,7 +616,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFF1A73E8), size: 22),
+            Icon(icon,
+                color: const Color(0xFF1A73E8), size: 22),
             const SizedBox(width: 14),
             Text(title,
                 style: const TextStyle(
@@ -641,24 +664,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       fontSize: 13, color: Colors.grey[600])),
               const SizedBox(height: 32),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceEvenly,
                 children: [
-                  _profileStat('$_totalSessions', 'Sessions'),
                   _profileStat(
-                      _bestScore == -1 ? '--' : '$_bestScore%',
+                      '$_totalSessions', 'Sessions'),
+                  _profileStat(
+                      _bestScore == -1
+                          ? '--'
+                          : '$_bestScore%',
                       'Best Score'),
-                  _profileStat('$_totalSessions', 'Streak'),
+                  _profileStat(
+                      '$_totalSessions', 'Streak'),
                 ],
               ),
               const SizedBox(height: 32),
               _settingItem(
-                  Icons.notifications_rounded, 'Notifications'),
+                  Icons.notifications_rounded,
+                  'Notifications'),
               _settingItem(
-                  Icons.bar_chart_rounded, 'Progress Report'),
+                  Icons.bar_chart_rounded,
+                  'Progress Report'),
               _settingItem(
-                  Icons.help_outline_rounded, 'Help & Support'),
+                  Icons.help_outline_rounded,
+                  'Help & Support'),
               _settingItem(
-                  Icons.info_outline_rounded, 'About App'),
+                Icons.info_outline_rounded,
+                'About App',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const AboutScreen()),
+                ),
+              ),
               const SizedBox(height: 8),
               _settingItem(
                 Icons.logout_rounded,
