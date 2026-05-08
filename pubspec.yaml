@@ -1,5 +1,5 @@
-name: body_language_app
-description: "A new Flutter project."
+name: confidai
+description: "AI-Based Body Language Analysis System"
 publish_to: 'none'
 
 version: 1.0.0+1
