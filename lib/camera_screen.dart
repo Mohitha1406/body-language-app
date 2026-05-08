@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 import 'dart:io';
+import 'dart:convert';
 import 'results_screen.dart';
 import 'history_screen.dart';
 
@@ -18,6 +20,7 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _isRecording = false;
   bool _isInitialized = false;
   bool _isLoading = true;
+  bool _isAnalyzing = false;
   int _countdown = 0;
   int _recordingSeconds = 0;
   String? _errorMessage;
@@ -58,9 +61,29 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  double _calculateScore() {
-    final random = DateTime.now().millisecondsSinceEpoch % 40 + 55;
-    return random.toDouble();
+  Future<Map<String, dynamic>> _analyzeWithAI(String videoPath) async {
+    try {
+      final uri = Uri.parse('http://192.168.137.1:8000/analyze');
+      final request = http.MultipartRequest('POST', uri);
+      request.files.add(await http.MultipartFile.fromPath('video', videoPath));
+
+      final response = await request.send().timeout(const Duration(seconds: 60));
+      final body = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        return jsonDecode(body);
+      } else {
+        return {
+          'confidence_score': 65.0,
+          'tips': ['Could not analyze video. Please try again.']
+        };
+      }
+    } catch (e) {
+      return {
+        'confidence_score': 60.0,
+        'tips': ['Network error: Make sure backend is running on same WiFi.']
+      };
+    }
   }
 
   List<String> _getFeedback(double score) {
@@ -112,31 +135,48 @@ class _CameraScreenState extends State<CameraScreen> {
 
       // Stop recording
       final XFile videoFile = await _controller!.stopVideoRecording();
-      setState(() { _isRecording = false; });
+      setState(() { _isRecording = false; _isAnalyzing = true; });
 
-      // Calculate real score
-      final double realScore = _calculateScore();
+      // Show analyzing snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Analyzing with AI... please wait 10-20 seconds'),
+            duration: Duration(seconds: 20),
+          ),
+        );
+      }
+
+      // Call real AI backend
+      final result = await _analyzeWithAI(videoFile.path);
+      final double realScore = (result['confidence_score'] as num).toDouble();
+      final List<String> aiTips = result['tips'] != null
+          ? List<String>.from(result['tips'])
+          : _getFeedback(realScore);
 
       // Save to history
       await HistoryScreen.addSession(realScore);
 
+      setState(() { _isAnalyzing = false; });
+
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => ResultsScreen(
               confidenceScore: realScore,
-              feedback: _getFeedback(realScore),
+              feedback: aiTips,
               videoPath: videoFile.path,
             ),
           ),
         );
       }
     } catch (e) {
-      setState(() { _isRecording = false; });
+      setState(() { _isRecording = false; _isAnalyzing = false; });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Recording error: $e')),
+          SnackBar(content: Text('Error: $e')),
         );
       }
     }
@@ -167,13 +207,11 @@ class _CameraScreenState extends State<CameraScreen> {
                 // Camera preview or loading
                 if (_isLoading)
                   const Center(
-                      child: CircularProgressIndicator(
-                          color: Colors.white))
+                      child: CircularProgressIndicator(color: Colors.white))
                 else if (_errorMessage != null)
                   Center(
                       child: Text(_errorMessage!,
-                          style: const TextStyle(
-                              color: Colors.white)))
+                          style: const TextStyle(color: Colors.white)))
                 else if (_isInitialized)
                   SizedBox.expand(
                     child: CameraPreview(_controller!),
@@ -184,6 +222,34 @@ class _CameraScreenState extends State<CameraScreen> {
                   CustomPaint(
                     painter: SkeletonPainter(),
                     size: Size.infinite,
+                  ),
+
+                // Analyzing overlay
+                if (_isAnalyzing)
+                  Container(
+                    color: Colors.black87,
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(color: Colors.greenAccent),
+                          SizedBox(height: 24),
+                          Text(
+                            'AI is analyzing your\nbody language...',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'This may take 10–20 seconds',
+                            style: TextStyle(color: Colors.white54, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
 
                 // Countdown
@@ -237,8 +303,8 @@ class _CameraScreenState extends State<CameraScreen> {
                     child: LinearProgressIndicator(
                       value: _recordingSeconds / 10,
                       backgroundColor: Colors.white24,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                          Colors.red),
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(Colors.red),
                       minHeight: 4,
                     ),
                   ),
@@ -252,12 +318,12 @@ class _CameraScreenState extends State<CameraScreen> {
             padding: const EdgeInsets.all(30),
             child: Column(
               children: [
-                if (!_isRecording && _countdown == 0) ...[
+                if (!_isRecording && _countdown == 0 && !_isAnalyzing) ...[
                   const Text(
                       'Stand in front of camera\nand press record to start',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: Colors.white70, fontSize: 13)),
+                      style:
+                          TextStyle(color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 24),
                   GestureDetector(
                     onTap: _isInitialized ? _startRecording : null,
@@ -265,12 +331,9 @@ class _CameraScreenState extends State<CameraScreen> {
                       width: 72,
                       height: 72,
                       decoration: BoxDecoration(
-                        color: _isInitialized
-                            ? Colors.red
-                            : Colors.grey,
+                        color: _isInitialized ? Colors.red : Colors.grey,
                         shape: BoxShape.circle,
-                        border:
-                            Border.all(color: Colors.white, width: 3),
+                        border: Border.all(color: Colors.white, width: 3),
                         boxShadow: [
                           BoxShadow(
                               color: Colors.red.withOpacity(0.4),
@@ -284,12 +347,12 @@ class _CameraScreenState extends State<CameraScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text('Tap to Record',
-                      style: TextStyle(
-                          color: Colors.white54, fontSize: 12)),
+                      style:
+                          TextStyle(color: Colors.white54, fontSize: 12)),
                 ],
                 if (_isRecording) ...[
                   Text(
-                      'Analyzing your body language...\n${10 - _recordingSeconds} seconds remaining',
+                      'Recording body language...\n${10 - _recordingSeconds} seconds remaining',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                           color: Colors.white, fontSize: 14)),
@@ -323,16 +386,14 @@ class SkeletonPainter extends CustomPainter {
     final cx = size.width / 2;
     final cy = size.height / 2;
     canvas.drawCircle(Offset(cx, cy - 80), 20, dotPaint);
-    canvas.drawLine(
-        Offset(cx, cy - 60), Offset(cx, cy - 40), paint);
+    canvas.drawLine(Offset(cx, cy - 60), Offset(cx, cy - 40), paint);
     canvas.drawLine(
         Offset(cx - 60, cy - 40), Offset(cx + 60, cy - 40), paint);
     canvas.drawLine(
         Offset(cx - 60, cy - 40), Offset(cx - 90, cy + 20), paint);
     canvas.drawLine(
         Offset(cx + 60, cy - 40), Offset(cx + 90, cy + 20), paint);
-    canvas.drawLine(
-        Offset(cx, cy - 40), Offset(cx, cy + 40), paint);
+    canvas.drawLine(Offset(cx, cy - 40), Offset(cx, cy + 40), paint);
     canvas.drawLine(
         Offset(cx, cy + 40), Offset(cx - 40, cy + 120), paint);
     canvas.drawLine(
