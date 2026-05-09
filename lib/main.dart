@@ -40,95 +40,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-    _fadeAnim =
-        CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _controller.forward();
-    Future.delayed(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainScreen()),
-      );
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A73E8),
-      body: FadeTransition(
-        opacity: _fadeAnim,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                    Icons.accessibility_new_rounded,
-                    size: 60,
-                    color: Color(0xFF1A73E8)),
-              ),
-              const SizedBox(height: 24),
-              const Text('Body Language AI',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1)),
-              const SizedBox(height: 8),
-              const Text('Analyze. Improve. Confidence.',
-                  style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      letterSpacing: 0.5)),
-              const SizedBox(height: 48),
-              const CircularProgressIndicator(
-                  color: Colors.white, strokeWidth: 2),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -167,6 +78,570 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
+// ── NOTIFICATIONS SCREEN ────────────────────────────────────────
+class NotificationsScreen extends StatelessWidget {
+  const NotificationsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final notifications = [
+      {'icon': '🎯', 'title': 'Practice Reminder', 'body': 'You haven\'t practiced today. Record a session to keep your streak!', 'time': '2 hours ago'},
+      {'icon': '🏆', 'title': 'New Achievement', 'body': 'Congratulations! You completed 3 sessions this week.', 'time': 'Yesterday'},
+      {'icon': '💡', 'title': 'Tip of the Day', 'body': 'Maintain eye contact for at least 60% of your presentation for maximum impact.', 'time': '2 days ago'},
+      {'icon': '📈', 'title': 'Progress Update', 'body': 'Your posture score improved by 15% compared to last week. Keep it up!', 'time': '3 days ago'},
+      {'icon': '🎉', 'title': 'Welcome to ConfidAI', 'body': 'Start your first analysis to get your baseline confidence score.', 'time': '1 week ago'},
+    ];
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FF),
+      appBar: AppBar(
+        title: const Text('Notifications',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1A1A2E),
+        elevation: 0,
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: notifications.length,
+        itemBuilder: (context, index) {
+          final n = notifications[index];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2)),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A73E8).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                      child: Text(n['icon']!,
+                          style: const TextStyle(fontSize: 22))),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(n['title']!,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Color(0xFF1A1A2E))),
+                          Text(n['time']!,
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[500])),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(n['body']!,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              height: 1.4)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── PROGRESS REPORT SCREEN ───────────────────────────────────────
+class ProgressReportScreen extends StatefulWidget {
+  const ProgressReportScreen({super.key});
+
+  @override
+  State<ProgressReportScreen> createState() =>
+      _ProgressReportScreenState();
+}
+
+class _ProgressReportScreenState
+    extends State<ProgressReportScreen> {
+  List<Map<String, dynamic>> _sessions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList('sessions') ?? [];
+    setState(() {
+      _sessions = raw
+          .map((s) => jsonDecode(s) as Map<String, dynamic>)
+          .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final avgScore = _sessions.isEmpty
+        ? 0
+        : (_sessions.map((s) => s['score'] as int).reduce((a, b) => a + b) /
+                _sessions.length)
+            .round();
+    final bestScore = _sessions.isEmpty
+        ? 0
+        : _sessions
+            .map((s) => s['score'] as int)
+            .reduce((a, b) => a > b ? a : b);
+    final totalSessions = _sessions.length;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FF),
+      appBar: AppBar(
+        title: const Text('Progress Report',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1A1A2E),
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Summary cards
+            Row(
+              children: [
+                Expanded(
+                    child: _summaryCard(
+                        'Total Sessions',
+                        '$totalSessions',
+                        Icons.video_library_rounded,
+                        const Color(0xFF1A73E8))),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: _summaryCard(
+                        'Best Score',
+                        '$bestScore%',
+                        Icons.emoji_events_rounded,
+                        const Color(0xFFF59E0B))),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: _summaryCard(
+                        'Average',
+                        '$avgScore%',
+                        Icons.trending_up_rounded,
+                        const Color(0xFF10B981))),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Score level
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8)
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Performance Level',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFF1A1A2E))),
+                  const SizedBox(height: 16),
+                  _levelBar('Beginner', 0, 40, avgScore,
+                      const Color(0xFFEF4444)),
+                  const SizedBox(height: 8),
+                  _levelBar('Developing', 40, 65, avgScore,
+                      const Color(0xFFF59E0B)),
+                  const SizedBox(height: 8),
+                  _levelBar('Proficient', 65, 80, avgScore,
+                      const Color(0xFF1A73E8)),
+                  const SizedBox(height: 8),
+                  _levelBar('Expert', 80, 100, avgScore,
+                      const Color(0xFF10B981)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Session history list
+            const Text('Session History',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Color(0xFF1A1A2E))),
+            const SizedBox(height: 12),
+            if (_sessions.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.bar_chart_rounded,
+                          size: 48, color: Colors.grey),
+                      SizedBox(height: 12),
+                      Text('No sessions yet',
+                          style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 14)),
+                      Text(
+                          'Record your first analysis to see progress',
+                          style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12)),
+                    ],
+                  ),
+                ),
+              )
+            else
+              ...List.generate(_sessions.length, (i) {
+                final s = _sessions[i];
+                final score = s['score'] as int;
+                Color scoreColor = score >= 75
+                    ? const Color(0xFF10B981)
+                    : score >= 50
+                        ? const Color(0xFFF59E0B)
+                        : const Color(0xFFEF4444);
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 6)
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: scoreColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text('$score%',
+                              style: TextStyle(
+                                  color: scoreColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text('Session ${_sessions.length - i}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Color(0xFF1A1A2E))),
+                            Text(s['date'] ?? '',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[500])),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        score >= 75
+                            ? Icons.trending_up_rounded
+                            : Icons.trending_flat_rounded,
+                        color: scoreColor,
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryCard(
+      String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8)
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color)),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10, color: Colors.grey[600]),
+              textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+
+  Widget _levelBar(String label, int min, int max,
+      int currentScore, Color color) {
+    final isCurrentLevel =
+        currentScore >= min && currentScore < max;
+    return Row(
+      children: [
+        SizedBox(
+            width: 80,
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isCurrentLevel
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    color: isCurrentLevel
+                        ? color
+                        : Colors.grey[600]))),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: (max - min) / 100,
+              backgroundColor: color.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                  isCurrentLevel ? color : color.withOpacity(0.3)),
+              minHeight: 8,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text('$min-$max%',
+            style:
+                TextStyle(fontSize: 10, color: Colors.grey[500])),
+      ],
+    );
+  }
+}
+
+// ── HELP & SUPPORT SCREEN ────────────────────────────────────────
+class HelpSupportScreen extends StatelessWidget {
+  const HelpSupportScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final faqs = [
+      {
+        'q': 'How does the AI analyze my body language?',
+        'a':
+            'ConfidAI uses Google MediaPipe\'s Pose Landmarker to detect 33 body landmarks from your video. It analyzes shoulder alignment for posture, nose movement for head stability, and wrist visibility for gesture detection.'
+      },
+      {
+        'q': 'Why is my score always the same?',
+        'a':
+            'Make sure you are standing in front of the camera and fully visible. The AI needs to detect your shoulders, head, and hands. Good lighting also helps improve detection accuracy.'
+      },
+      {
+        'q': 'What is a good Confidence Score?',
+        'a':
+            'Scores above 75% are considered Proficient. Scores above 85% are Expert level. Most beginners start between 50-65% and improve with regular practice.'
+      },
+      {
+        'q': 'How often should I practice?',
+        'a':
+            'We recommend practicing at least once daily. Consistent practice of 10-second sessions over 2 weeks shows significant improvement in most users.'
+      },
+      {
+        'q': 'Does the app work without internet?',
+        'a':
+            'The AI analysis requires an internet connection to send your video to our backend server. Login and session history viewing can work offline.'
+      },
+      {
+        'q': 'How is my data protected?',
+        'a':
+            'Your videos are processed and immediately deleted from our servers. We only store your score and session metadata. All data is encrypted using Supabase\'s enterprise-grade security.'
+      },
+    ];
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FF),
+      appBar: AppBar(
+        title: const Text('Help & Support',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1A1A2E),
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A73E8), Color(0xFF0D47A1)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.support_agent_rounded,
+                      color: Colors.white, size: 40),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        Text('How can we help?',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16)),
+                        SizedBox(height: 4),
+                        Text(
+                            'Find answers to common questions below',
+                            style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text('Frequently Asked Questions',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Color(0xFF1A1A2E))),
+            const SizedBox(height: 12),
+            ...faqs.map((faq) => Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 6)
+                    ],
+                  ),
+                  child: ExpansionTile(
+                    title: Text(faq['q']!,
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1A1A2E))),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                            16, 0, 16, 16),
+                        child: Text(faq['a']!,
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                                height: 1.5)),
+                      )
+                    ],
+                  ),
+                )),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8)
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Contact Us',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFF1A1A2E))),
+                  const SizedBox(height: 12),
+                  _contactRow(Icons.email_rounded,
+                      'mohithapapudesi14@gmail.com'),
+                  const SizedBox(height: 8),
+                  _contactRow(Icons.language_rounded,
+                      'confidai-b469a.web.app'),
+                  const SizedBox(height: 8),
+                  _contactRow(Icons.code_rounded,
+                      'github.com/Mohitha1406/body-language-app'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _contactRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFF1A73E8), size: 18),
+        const SizedBox(width: 10),
+        Text(text,
+            style: TextStyle(
+                fontSize: 13, color: Colors.grey[700])),
+      ],
+    );
+  }
+}
+
+// ── HOME SCREEN ──────────────────────────────────────────────────
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -229,9 +704,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _getScoreMessage() {
-    if (_latestScore == -1) {
-      return 'No sessions yet — start your first analysis!';
-    }
+    if (_latestScore == -1) return 'No sessions yet — start your first analysis!';
     if (_latestScore >= 80) return 'Excellent! Keep it up! 🔥';
     if (_latestScore >= 65) return 'Good job! Keep practicing!';
     return 'Keep going — you\'re improving!';
@@ -246,8 +719,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _statChip(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.15),
         borderRadius: BorderRadius.circular(20),
@@ -260,8 +732,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontWeight: FontWeight.bold,
                   fontSize: 13)),
           Text(label,
-              style: const TextStyle(
-                  color: Colors.white70, fontSize: 10)),
+              style: const TextStyle(color: Colors.white70, fontSize: 10)),
         ],
       ),
     );
@@ -295,9 +766,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontSize: 13,
                         color: Color(0xFF1A1A2E))),
                 Text(desc,
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600])),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600])),
               ],
             ),
           ),
@@ -320,12 +789,10 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Hello, $_userName 👋',
                             style: const TextStyle(
@@ -333,16 +800,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF1A1A2E))),
                         const SizedBox(height: 4),
-                        Text(
-                            'Ready to improve your body language?',
+                        Text('Ready to improve your body language?',
                             style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey[600])),
+                                fontSize: 13, color: Colors.grey[600])),
                       ],
                     ),
                     CircleAvatar(
-                      backgroundColor:
-                          const Color(0xFF1A73E8),
+                      backgroundColor: const Color(0xFF1A73E8),
                       radius: 22,
                       child: Text(_userInitials,
                           style: const TextStyle(
@@ -358,35 +822,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF1A73E8),
-                        Color(0xFF0D47A1)
-                      ],
+                      colors: [Color(0xFF1A73E8), Color(0xFF0D47A1)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                          color: const Color(0xFF1A73E8)
-                              .withOpacity(0.3),
+                          color: const Color(0xFF1A73E8).withOpacity(0.3),
                           blurRadius: 16,
                           offset: const Offset(0, 6)),
                     ],
                   ),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text('Your Latest Score',
-                          style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13)),
+                          style: TextStyle(color: Colors.white70, fontSize: 13)),
                       const SizedBox(height: 8),
                       Text(
-                        _latestScore == -1
-                            ? '-- %'
-                            : '$_latestScore%',
+                        _latestScore == -1 ? '-- %' : '$_latestScore%',
                         style: TextStyle(
                             color: _latestScore == -1
                                 ? Colors.white
@@ -394,26 +849,18 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontSize: 48,
                             fontWeight: FontWeight.bold),
                       ),
-                      Text(
-                        _getScoreMessage(),
-                        style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12),
-                      ),
+                      Text(_getScoreMessage(),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12)),
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          _statChip('Sessions',
-                              '$_totalSessions'),
+                          _statChip('Sessions', '$_totalSessions'),
                           const SizedBox(width: 12),
-                          _statChip(
-                              'Best Score',
-                              _bestScore == -1
-                                  ? '--'
-                                  : '$_bestScore%'),
+                          _statChip('Best Score',
+                              _bestScore == -1 ? '--' : '$_bestScore%'),
                           const SizedBox(width: 12),
-                          _statChip('Streak',
-                              '$_totalSessions days'),
+                          _statChip('Streak', '$_totalSessions days'),
                         ],
                       ),
                     ],
@@ -425,8 +872,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     await Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) =>
-                                const CameraScreen()));
+                            builder: (_) => const CameraScreen()));
                     _loadData();
                   },
                   child: Container(
@@ -434,12 +880,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius:
-                          BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black
-                                .withOpacity(0.06),
+                            color: Colors.black.withOpacity(0.06),
                             blurRadius: 12,
                             offset: const Offset(0, 4)),
                       ],
@@ -450,42 +894,31 @@ class _HomeScreenState extends State<HomeScreen> {
                           width: 52,
                           height: 52,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A73E8)
-                                .withOpacity(0.1),
-                            borderRadius:
-                                BorderRadius.circular(14),
+                            color: const Color(0xFF1A73E8).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(
-                              Icons.videocam_rounded,
-                              color: Color(0xFF1A73E8),
-                              size: 28),
+                          child: const Icon(Icons.videocam_rounded,
+                              color: Color(0xFF1A73E8), size: 28),
                         ),
                         const SizedBox(width: 16),
                         const Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Start New Analysis',
                                   style: TextStyle(
                                       fontSize: 16,
-                                      fontWeight:
-                                          FontWeight.bold,
-                                      color: Color(
-                                          0xFF1A1A2E))),
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1A1A2E))),
                               SizedBox(height: 4),
-                              Text(
-                                  'Record video and get confidence score',
+                              Text('Record video and get confidence score',
                                   style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey)),
+                                      fontSize: 12, color: Colors.grey)),
                             ],
                           ),
                         ),
-                        const Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            color: Colors.grey,
-                            size: 16),
+                        const Icon(Icons.arrow_forward_ios_rounded,
+                            color: Colors.grey, size: 16),
                       ],
                     ),
                   ),
@@ -514,6 +947,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+// ── PROFILE SCREEN ───────────────────────────────────────────────
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -538,14 +972,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? 'User';
     final email = prefs.getString('user_email') ?? '';
-    final List<String> raw =
-        prefs.getStringList('sessions') ?? [];
+    final List<String> raw = prefs.getStringList('sessions') ?? [];
 
     int bestScore = -1;
     if (raw.isNotEmpty) {
-      final sessions = raw
-          .map((s) => jsonDecode(s) as Map<String, dynamic>)
-          .toList();
+      final sessions =
+          raw.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
       bestScore = sessions
           .map((s) => s['score'] as int)
           .reduce((a, b) => a > b ? a : b);
@@ -572,8 +1004,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-            builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
         (route) => false,
       );
     }
@@ -581,8 +1012,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _profileStat(String value, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -602,15 +1032,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: Color(0xFF1A73E8))),
           const SizedBox(height: 4),
           Text(label,
-              style: TextStyle(
-                  fontSize: 11, color: Colors.grey[600])),
+              style: TextStyle(fontSize: 11, color: Colors.grey[600])),
         ],
       ),
     );
   }
 
-  Widget _settingItem(IconData icon, String title,
-      {VoidCallback? onTap}) {
+  Widget _settingItem(IconData icon, String title, {VoidCallback? onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -628,8 +1056,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon,
-                color: const Color(0xFF1A73E8), size: 22),
+            Icon(icon, color: const Color(0xFF1A73E8), size: 22),
             const SizedBox(width: 14),
             Text(title,
                 style: const TextStyle(
@@ -672,43 +1099,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Color(0xFF1A1A2E))),
               const SizedBox(height: 4),
               Text(_userEmail,
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600])),
+                  style:
+                      TextStyle(fontSize: 13, color: Colors.grey[600])),
               const SizedBox(height: 32),
               Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
+                  _profileStat('$_totalSessions', 'Sessions'),
                   _profileStat(
-                      '$_totalSessions', 'Sessions'),
-                  _profileStat(
-                      _bestScore == -1
-                          ? '--'
-                          : '$_bestScore%',
+                      _bestScore == -1 ? '--' : '$_bestScore%',
                       'Best Score'),
-                  _profileStat(
-                      '$_totalSessions', 'Streak'),
+                  _profileStat('$_totalSessions', 'Streak'),
                 ],
               ),
               const SizedBox(height: 32),
               _settingItem(
-                  Icons.notifications_rounded,
-                  'Notifications'),
+                Icons.notifications_rounded,
+                'Notifications',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen()),
+                ),
+              ),
               _settingItem(
-                  Icons.bar_chart_rounded,
-                  'Progress Report'),
+                Icons.bar_chart_rounded,
+                'Progress Report',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ProgressReportScreen()),
+                ),
+              ),
               _settingItem(
-                  Icons.help_outline_rounded,
-                  'Help & Support'),
+                Icons.help_outline_rounded,
+                'Help & Support',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const HelpSupportScreen()),
+                ),
+              ),
               _settingItem(
                 Icons.info_outline_rounded,
                 'About App',
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) =>
-                          const AboutScreen()),
+                      builder: (_) => const AboutScreen()),
                 ),
               ),
               const SizedBox(height: 8),

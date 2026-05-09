@@ -56,22 +56,18 @@ def analyze_video(video_path):
 
             if result.pose_landmarks and len(result.pose_landmarks) > 0:
                 lm = result.pose_landmarks[0]
-
-                # Shoulder alignment (index 11=left, 12=right)
                 left_shoulder = lm[11]
                 right_shoulder = lm[12]
                 shoulder_diff = abs(left_shoulder.y - right_shoulder.y)
                 posture_score = max(0, 1 - shoulder_diff * 10)
                 posture_scores.append(posture_score)
 
-                # Head stability (index 0=nose)
                 nose = lm[0]
                 if prev_nose_y is not None:
                     movement = abs(nose.y - prev_nose_y)
                     head_stability.append(max(0, 1 - movement * 20))
                 prev_nose_y = nose.y
 
-                # Gesture proxy: wrist visibility (15=left wrist, 16=right wrist)
                 left_wrist = lm[15]
                 right_wrist = lm[16]
                 wrists_visible = (left_wrist.visibility > 0.5) or (right_wrist.visibility > 0.5)
@@ -79,9 +75,23 @@ def analyze_video(video_path):
 
     cap.release()
 
-    posture = np.mean(posture_scores) * 100 if posture_scores else 50
+    # If no person detected — return error
+    if not posture_scores:
+        return {
+            "confidence_score": 0,
+            "posture_score": 0,
+            "head_stability_score": 0,
+            "gesture_score": 0,
+            "tips": [
+                "No person detected in the video.",
+                "Please stand in front of the camera and try again.",
+                "Make sure you are fully visible in the frame."
+            ]
+        }
+
+    posture = np.mean(posture_scores) * 100
     head = np.mean(head_stability) * 100 if head_stability else 50
-    gesture_ratio = np.mean(gesture_counts) * 100 if gesture_counts else 50
+    gesture_ratio = np.mean(gesture_counts) * 100
 
     confidence = (posture * 0.4) + (head * 0.3) + (gesture_ratio * 0.3)
     confidence = round(min(max(confidence, 10), 98), 1)
@@ -112,7 +122,7 @@ def analyze_video(video_path):
 
 @app.get("/")
 def root():
-    return {"status": "Body Language AI backend running"}
+    return {"status": "ConfidAI backend running"}
 
 @app.post("/analyze")
 async def analyze(video: UploadFile = File(...)):
