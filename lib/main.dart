@@ -10,6 +10,8 @@ import 'about_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
+    // TODO: replace with your NEW Supabase project's URL + anon key
+    // once you create the new account (Settings > API in your dashboard).
     url: 'https://bymsesfomceglnmxsxtz.supabase.co',
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5bXNlc2ZvbWNlZ2xubXhzeHR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTY5MTUsImV4cCI6MjA5MzU3MjkxNX0.L0bpy3N5Uxt5geqftgvW-K9YpwAAv0n7SxbknRnjE-o',
@@ -56,9 +58,103 @@ class _MainScreenState extends State<MainScreen> {
     ProfileScreen(),
   ];
 
+  final List<String> _titles = const ['ConfidAI', 'Session History', 'Profile'];
+
+  Future<void> _logout() async {
+    await Supabase.instance.client.auth.signOut();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
+
+  Widget _drawerItem(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFF1A73E8)),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+      onTap: onTap,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(_titles[_currentIndex]),
+        backgroundColor: const Color(0xFF1A73E8),
+        foregroundColor: Colors.white,
+      ),
+      drawer: Drawer(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(color: Color(0xFF1A73E8)),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.self_improvement_rounded,
+                        color: Colors.white, size: 36),
+                    SizedBox(height: 8),
+                    Text('ConfidAI',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+              _drawerItem(Icons.home_rounded, 'Home', () {
+                Navigator.pop(context);
+                setState(() => _currentIndex = 0);
+              }),
+              _drawerItem(Icons.history_rounded, 'History', () {
+                Navigator.pop(context);
+                setState(() => _currentIndex = 1);
+              }),
+              _drawerItem(Icons.person_rounded, 'Profile', () {
+                Navigator.pop(context);
+                setState(() => _currentIndex = 2);
+              }),
+              const Divider(),
+              _drawerItem(Icons.notifications_rounded, 'Notifications', () {
+                Navigator.pop(context);
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+              }),
+              _drawerItem(Icons.bar_chart_rounded, 'Progress Report', () {
+                Navigator.pop(context);
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ProgressReportScreen()));
+              }),
+              _drawerItem(Icons.help_outline_rounded, 'Help & Support', () {
+                Navigator.pop(context);
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
+              }),
+              _drawerItem(Icons.info_outline_rounded, 'About App', () {
+                Navigator.pop(context);
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const AboutScreen()));
+              }),
+              const Spacer(),
+              const Divider(),
+              _drawerItem(Icons.logout_rounded, 'Logout', () {
+                Navigator.pop(context);
+                _logout();
+              }),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
@@ -227,7 +323,6 @@ class _ProgressReportScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Summary cards
             Row(
               children: [
                 Expanded(
@@ -253,8 +348,6 @@ class _ProgressReportScreenState
               ],
             ),
             const SizedBox(height: 24),
-
-            // Score level
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -290,8 +383,6 @@ class _ProgressReportScreenState
               ),
             ),
             const SizedBox(height: 24),
-
-            // Session history list
             const Text('Session History',
                 style: TextStyle(
                     fontWeight: FontWeight.bold,

@@ -19,7 +19,7 @@ class HistoryScreen extends StatefulWidget {
       'time':
           '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
       'score': score.toInt(),
-      'duration': '10 sec',
+      'duration': '20 sec',
     });
     sessions.insert(0, session);
     await prefs.setStringList('sessions', sessions);

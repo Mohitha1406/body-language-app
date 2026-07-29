@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
-import 'dart:io';
 import 'dart:convert';
 import 'results_screen.dart';
 import 'history_screen.dart';
+
+// TODO: set this to your deployed backend URL, e.g. https://your-backend.onrender.com — a LAN IP will never work for a deployed web app.
+const String kBackendBaseUrl = 'https://your-backend.onrender.com';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -61,33 +62,26 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  Future<Map<String, dynamic>> _analyzeWithAI(String videoPath) async {
-    try {
-      final uri = Uri.parse('http://172.25.17.229:8000/analyze');
-      final request = http.MultipartRequest('POST', uri);
-      request.files.add(
-          await http.MultipartFile.fromPath('video', videoPath));
-      final response = await request
-          .send()
-          .timeout(const Duration(seconds: 60));
-      final body = await response.stream.bytesToString();
-      if (response.statusCode == 200) {
-        return jsonDecode(body);
-      } else {
-        return {
-          'confidence_score': 65.0,
-          'tips': ['Could not analyze video. Please try again.']
-        };
-      }
-    } catch (e) {
-      return {
-        'confidence_score': 0.0,
-        'tips': [
-          'Could not connect to AI backend.',
-          'Make sure your phone and laptop are on the same WiFi.',
-          'Backend must be running on your laptop.',
-        ]
-      };
+  Future<Map<String, dynamic>> _analyzeWithAI(XFile videoFile) async {
+    final uri = Uri.parse('$kBackendBaseUrl/analyze');
+    final request = http.MultipartRequest('POST', uri);
+    final bytes = await videoFile.readAsBytes();
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'video',
+        bytes,
+        filename: 'video.mp4',
+      ),
+    );
+
+    final response =
+        await request.send().timeout(const Duration(seconds: 15));
+    final body = await response.stream.bytesToString();
+
+    if (response.statusCode == 200) {
+      return jsonDecode(body);
+    } else {
+      throw Exception('Server returned status code ${response.statusCode}');
     }
   }
 
@@ -130,7 +124,7 @@ class _CameraScreenState extends State<CameraScreen> {
       await _controller!.startVideoRecording();
       setState(() { _isRecording = true; _recordingSeconds = 0; });
 
-      for (int i = 1; i <= 10; i++) {
+      for (int i = 1; i <= 20; i++) {
         await Future.delayed(const Duration(seconds: 1));
         if (mounted) setState(() { _recordingSeconds = i; });
       }
@@ -141,15 +135,38 @@ class _CameraScreenState extends State<CameraScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Analyzing with AI... please wait 10-20 seconds'),
+            content: Text('Analyzing with AI... please wait a few seconds'),
             duration: Duration(seconds: 30),
           ),
         );
       }
 
-      final result = await _analyzeWithAI(videoFile.path);
+      Map<String, dynamic> result;
+      try {
+        result = await _analyzeWithAI(videoFile);
+      } catch (e) {
+        setState(() { _isAnalyzing = false; });
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Analysis failed: $e'),
+              duration: const Duration(seconds: 8),
+            ),
+          );
+        }
+        return;
+      }
+
       final double realScore =
-          (result['confidence_score'] as num).toDouble();
+          (result['confidence_score'] as num?)?.toDouble() ?? 0.0;
+      final double postureScore =
+          (result['posture_score'] as num?)?.toDouble() ?? 0.0;
+      final double headScore =
+          (result['head_stability_score'] as num?)?.toDouble() ?? 0.0;
+      final double gestureScore =
+          (result['gesture_score'] as num?)?.toDouble() ?? 0.0;
+
       final List<String> aiTips = result['tips'] != null
           ? List<String>.from(result['tips'])
           : _getFeedback(realScore);
@@ -164,6 +181,9 @@ class _CameraScreenState extends State<CameraScreen> {
           MaterialPageRoute(
             builder: (_) => ResultsScreen(
               confidenceScore: realScore,
+              postureScore: postureScore,
+              headStabilityScore: headScore,
+              gestureScore: gestureScore,
               feedback: aiTips,
               videoPath: videoFile.path,
             ),
@@ -241,7 +261,7 @@ class _CameraScreenState extends State<CameraScreen> {
                           ),
                           SizedBox(height: 8),
                           Text(
-                            'This may take 10–20 seconds',
+                            'Processing MediaPipe pose data...',
                             style: TextStyle(
                                 color: Colors.white54,
                                 fontSize: 13),
@@ -299,7 +319,7 @@ class _CameraScreenState extends State<CameraScreen> {
                     left: 0,
                     right: 0,
                     child: LinearProgressIndicator(
-                      value: _recordingSeconds / 10,
+                      value: _recordingSeconds / 20,
                       backgroundColor: Colors.white24,
                       valueColor:
                           const AlwaysStoppedAnimation<Color>(
@@ -355,14 +375,14 @@ class _CameraScreenState extends State<CameraScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text('Tap to Record',
+                  const Text('Tap to Record (20 sec)',
                       style: TextStyle(
                           color: Colors.white54,
                           fontSize: 12)),
                 ],
                 if (_isRecording) ...[
                   Text(
-                      'Recording body language...\n${10 - _recordingSeconds} seconds remaining',
+                      'Recording body language...\n${20 - _recordingSeconds} seconds remaining',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                           color: Colors.white,
@@ -437,4 +457,4 @@ class SkeletonPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) =>
       false;
-}
+}

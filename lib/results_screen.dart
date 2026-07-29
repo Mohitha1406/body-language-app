@@ -2,23 +2,31 @@ import 'package:flutter/material.dart';
 
 class ResultsScreen extends StatelessWidget {
   final double confidenceScore;
+  final double postureScore;
+  final double headStabilityScore;
+  final double gestureScore;
   final List<String> feedback;
   final String? videoPath;
 
   const ResultsScreen({
     super.key,
     required this.confidenceScore,
+    this.postureScore = 0.0,
+    this.headStabilityScore = 0.0,
+    this.gestureScore = 0.0,
     required this.feedback,
     this.videoPath,
   });
 
   Color _getScoreColor() {
+    if (confidenceScore <= 0) return const Color(0xFFEF4444);
     if (confidenceScore >= 75) return const Color(0xFF10B981);
     if (confidenceScore >= 50) return const Color(0xFFF59E0B);
     return const Color(0xFFEF4444);
   }
 
   String _getScoreLabel() {
+    if (confidenceScore <= 0) return 'No Person';
     if (confidenceScore >= 75) return 'Great!';
     if (confidenceScore >= 50) return 'Average';
     return 'Needs Work';
@@ -26,6 +34,8 @@ class ResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isNoPerson = confidenceScore <= 0;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FF),
       appBar: AppBar(
@@ -39,6 +49,35 @@ class ResultsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            if (isNoPerson) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFEF4444)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: Color(0xFFEF4444), size: 28),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'No Person Detected in Camera!\nPlease make sure you stand in front of the camera and try again.',
+                        style: TextStyle(
+                          color: Color(0xFF991B1B),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(32),
@@ -67,7 +106,7 @@ class ResultsScreen extends StatelessWidget {
                         width: 160,
                         height: 160,
                         child: CircularProgressIndicator(
-                          value: confidenceScore / 100,
+                          value: (confidenceScore / 100).clamp(0.0, 1.0),
                           strokeWidth: 14,
                           backgroundColor: Colors.grey[200],
                           valueColor: AlwaysStoppedAnimation<Color>(
@@ -99,13 +138,13 @@ class ResultsScreen extends StatelessWidget {
                         color: const Color(0xFFE8F5E9),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.videocam,
+                          Icon(Icons.videocam,
                               color: Color(0xFF10B981), size: 16),
-                          const SizedBox(width: 6),
-                          const Text('Video saved successfully',
+                          SizedBox(width: 6),
+                          Text('Video recorded successfully',
                               style: TextStyle(
                                   fontSize: 12,
                                   color: Color(0xFF10B981),
@@ -140,10 +179,14 @@ class ResultsScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF1A1A2E))),
                   const SizedBox(height: 16),
-                  _scoreBar('Posture', 0.8),
-                  _scoreBar('Hand Gestures', 0.65),
-                  _scoreBar('Head Stability', 0.75),
-                  _scoreBar('Body Movement', 0.7),
+                  _scoreBar('Posture Alignment',
+                      (postureScore / 100).clamp(0.0, 1.0)),
+                  _scoreBar('Head Stability',
+                      (headStabilityScore / 100).clamp(0.0, 1.0)),
+                  _scoreBar('Hand Gestures',
+                      (gestureScore / 100).clamp(0.0, 1.0)),
+                  _scoreBar('Overall Presence',
+                      (confidenceScore / 100).clamp(0.0, 1.0)),
                 ],
               ),
             ),
@@ -241,8 +284,8 @@ class ResultsScreen extends StatelessWidget {
               value: value,
               minHeight: 8,
               backgroundColor: Colors.grey[200],
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  Color(0xFF1A73E8)),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                  value <= 0 ? Colors.red : const Color(0xFF1A73E8)),
             ),
           ),
         ],
@@ -279,4 +322,4 @@ class ResultsScreen extends StatelessWidget {
       ),
     );
   }
-}
+}
