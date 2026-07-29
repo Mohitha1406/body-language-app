@@ -1384,8 +1384,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     GestureDetector(
-                      onTap: () {
-                        setState(() => _currentIndex = 2);
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ProfileScreen()),
+                        );
+                        _loadData();
                       },
                       child: CircleAvatar(
                         backgroundColor: primaryColor,
