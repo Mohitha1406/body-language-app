@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'theme_provider.dart';
 
 class AchievementsScreen extends StatefulWidget {
   const AchievementsScreen({super.key});
@@ -34,6 +35,9 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
     final totalSessions = _sessions.length;
     final bestScore = _sessions.isEmpty
         ? 0
@@ -47,7 +51,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         'desc': 'Complete your 1st analysis session',
         'icon': Icons.stars_rounded,
         'unlocked': totalSessions >= 1,
-        'color': const Color(0xFF1A73E8),
+        'color': primaryColor,
       },
       {
         'title': '3-Day Streak',
@@ -89,17 +93,16 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     final unlockedCount = badges.where((b) => b['unlocked'] as bool).length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       appBar: AppBar(
         title: const Text('Achievements',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF1A73E8)))
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(

@@ -18,6 +18,8 @@ dependencies:
   supabase_flutter: ^2.12.4
   http: ^1.2.1
   image_picker: ^1.1.2
+  share_plus: ^10.1.4
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:

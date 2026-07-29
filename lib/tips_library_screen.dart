@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'theme_provider.dart';
 
 class TipsLibraryScreen extends StatelessWidget {
   const TipsLibraryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
     final categories = [
       {
         'title': 'Posture & Body Alignment',
         'icon': Icons.accessibility_new_rounded,
-        'color': const Color(0xFF1A73E8),
+        'color': primaryColor,
         'tips': [
           {
             'headline': 'Keep Spine Straight & Shoulders Relaxed',
@@ -117,12 +121,12 @@ class TipsLibraryScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       appBar: AppBar(
         title: const Text('Tips Library',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: SingleChildScrollView(

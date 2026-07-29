@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import 'theme_provider.dart';
 
 class ResultsScreen extends StatelessWidget {
   final double confidenceScore;
@@ -35,12 +37,14 @@ class ResultsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isNoPerson = confidenceScore <= 0;
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       appBar: AppBar(
         title: const Text('Analysis Results'),
-        backgroundColor: const Color(0xFF1A73E8),
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
@@ -82,7 +86,7 @@ class ResultsScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -161,7 +165,7 @@ class ResultsScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -173,19 +177,19 @@ class ResultsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Score Breakdown',
+                  Text('Score Breakdown',
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A2E))),
+                          color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
                   const SizedBox(height: 16),
-                  _scoreBar('Posture Alignment',
+                  _scoreBar(context, 'Posture Alignment',
                       (postureScore / 100).clamp(0.0, 1.0)),
-                  _scoreBar('Head Stability',
+                  _scoreBar(context, 'Head Stability',
                       (headStabilityScore / 100).clamp(0.0, 1.0)),
-                  _scoreBar('Hand Gestures',
+                  _scoreBar(context, 'Hand Gestures',
                       (gestureScore / 100).clamp(0.0, 1.0)),
-                  _scoreBar('Overall Presence',
+                  _scoreBar(context, 'Overall Presence',
                       (confidenceScore / 100).clamp(0.0, 1.0)),
                 ],
               ),
@@ -195,7 +199,7 @@ class ResultsScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -207,32 +211,56 @@ class ResultsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Improvement Suggestions',
+                  Text('Improvement Suggestions',
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A2E))),
+                          color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
                   const SizedBox(height: 16),
-                  ...feedback.map((tip) => _feedbackItem(tip)),
+                  ...feedback.map((tip) => _feedbackItem(tip, isDark)),
                 ],
               ),
             ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () =>
-                    Navigator.popUntil(context, (route) => route.isFirst),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  final String label = _getScoreLabel();
+                  final String shareText =
+                      "I scored ${confidenceScore.toInt()}% on ConfidAI - $label Level! 💪\nAnalyze your body language with ConfidAI!";
+                  Share.share(shareText);
+                },
+                icon: const Icon(Icons.share_rounded),
+                label: const Text('Share Results',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A73E8),
+                  backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Back to Home',
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () =>
+                    Navigator.popUntil(context, (route) => route.isFirst),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: BorderSide(color: primaryColor),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('Back to Home',
                     style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor)),
               ),
             ),
             const SizedBox(height: 12),
@@ -242,15 +270,15 @@ class ResultsScreen extends StatelessWidget {
                 onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: const BorderSide(color: Color(0xFF1A73E8)),
+                  side: BorderSide(color: primaryColor.withOpacity(0.5)),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Try Again',
+                child: Text('Try Again',
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A73E8))),
+                        color: primaryColor)),
               ),
             ),
           ],
@@ -259,7 +287,8 @@ class ResultsScreen extends StatelessWidget {
     );
   }
 
-  Widget _scoreBar(String label, double value) {
+  Widget _scoreBar(BuildContext context, String label, double value) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -273,8 +302,7 @@ class ResultsScreen extends StatelessWidget {
               Text('${(value * 100).toInt()}%',
                   style: const TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A2E))),
+                      fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 6),
@@ -285,7 +313,7 @@ class ResultsScreen extends StatelessWidget {
               minHeight: 8,
               backgroundColor: Colors.grey[200],
               valueColor: AlwaysStoppedAnimation<Color>(
-                  value <= 0 ? Colors.red : const Color(0xFF1A73E8)),
+                  value <= 0 ? Colors.red : primaryColor),
             ),
           ),
         ],
@@ -293,7 +321,7 @@ class ResultsScreen extends StatelessWidget {
     );
   }
 
-  Widget _feedbackItem(String tip) {
+  Widget _feedbackItem(String tip, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -313,13 +341,14 @@ class ResultsScreen extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(tip,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF1A1A2E),
+                    color: isDark ? Colors.white70 : const Color(0xFF1A1A2E),
                     height: 1.5)),
           ),
         ],
       ),
     );
   }
-}
+}
+

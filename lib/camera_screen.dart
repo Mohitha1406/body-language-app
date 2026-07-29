@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'results_screen.dart';
 import 'history_screen.dart';
+import 'theme_provider.dart';
 
 // TODO: set this to your deployed backend URL, e.g. https://your-backend.onrender.com — a LAN IP will never work for a deployed web app.
 const String kBackendBaseUrl = 'https://body-language-app.onrender.com';
@@ -321,6 +322,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _showCustomDurationDialog() async {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
     double tempVal = _selectedDuration.toDouble().clamp(5.0, 60.0);
     final TextEditingController controller =
         TextEditingController(text: '${tempVal.toInt()}');
@@ -342,17 +344,17 @@ class _CameraScreenState extends State<CameraScreen> {
                   const SizedBox(height: 16),
                   Text(
                     '${tempVal.toInt()} sec',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A73E8)),
+                        color: primaryColor),
                   ),
                   Slider(
                     value: tempVal,
                     min: 5.0,
                     max: 60.0,
                     divisions: 55,
-                    activeColor: const Color(0xFF1A73E8),
+                    activeColor: primaryColor,
                     label: '${tempVal.toInt()}s',
                     onChanged: (val) {
                       setDialogState(() {
@@ -388,7 +390,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A73E8),
+                    backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () {

@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'theme_provider.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       appBar: AppBar(
         title: const Text('About App'),
-        backgroundColor: const Color(0xFF1A73E8),
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -87,6 +91,14 @@ class AboutScreen extends StatelessWidget {
               icon: Icons.star_rounded,
               title: 'Key Features',
               content: '• Real camera recording\n• AI body language analysis\n• Confidence Score (0–100%)\n• Personalized feedback\n• Session history tracking\n• Progress monitoring',
+            ),
+            const SizedBox(height: 12),
+
+            // Planned Future Enhancements
+            _infoCard(
+              icon: Icons.auto_awesome_rounded,
+              title: 'Planned Future Enhancements',
+              content: '• Voice tone and vocal confidence analysis (planned)\n• Real-time posture correction alerts\n• Multi-speaker group presentation analysis',
             ),
             const SizedBox(height: 12),
 

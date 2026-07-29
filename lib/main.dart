@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'theme_provider.dart';
+import 'notifications_service.dart';
+import 'edit_profile_screen.dart';
 import 'history_screen.dart';
 import 'camera_screen.dart';
 import 'login_screen.dart';
@@ -12,15 +17,23 @@ import 'achievements_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
-    // TODO: replace with your NEW Supabase project's URL + anon key
-    // once you create the new account (Settings > API in your dashboard).
     url: 'https://bymsesfomceglnmxsxtz.supabase.co',
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5bXNlc2ZvbWNlZ2xubXhzeHR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTY5MTUsImV4cCI6MjA5MzU3MjkxNX0.L0bpy3N5Uxt5geqftgvW-K9YpwAAv0n7SxbknRnjE-o',
   );
   final prefs = await SharedPreferences.getInstance();
   final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
-  runApp(MyApp(isLoggedIn: isLoggedIn));
+
+  final themeProvider = await ThemeProvider.create();
+  await NotificationService.init();
+  await NotificationService.scheduleWeeklySummary();
+
+  runApp(
+    AppThemeProvider(
+      themeProvider: themeProvider,
+      child: MyApp(isLoggedIn: isLoggedIn),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -29,17 +42,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ConfidAI',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1A73E8),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
-      home: isLoggedIn ? const MainScreen() : const LoginScreen(),
+    final themeProvider = AppThemeProvider.of(context);
+    return ListenableBuilder(
+      listenable: themeProvider,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'ConfidAI',
+          debugShowCheckedModeBanner: false,
+          theme: themeProvider.themeData,
+          home: isLoggedIn ? const MainScreen() : const LoginScreen(),
+        );
+      },
     );
   }
 }
@@ -53,6 +66,8 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  String? _avatarPath;
+  String _userName = 'User';
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -61,6 +76,24 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   final List<String> _titles = const ['ConfidAI', 'Session History', 'Profile'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDrawerProfile();
+  }
+
+  Future<void> _loadDrawerProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name') ?? 'User';
+    final avatar = prefs.getString('user_avatar_path');
+    if (mounted) {
+      setState(() {
+        _userName = name;
+        _avatarPath = avatar;
+      });
+    }
+  }
 
   Future<void> _logout() async {
     await Supabase.instance.client.auth.signOut();
@@ -75,9 +108,9 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  Widget _drawerItem(IconData icon, String title, VoidCallback onTap) {
+  Widget _drawerItem(IconData icon, String title, VoidCallback onTap, Color primaryColor) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF1A73E8)),
+      leading: Icon(icon, color: primaryColor),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
       onTap: onTap,
     );
@@ -85,10 +118,12 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_currentIndex]),
-        backgroundColor: const Color(0xFF1A73E8),
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
       ),
       drawer: Drawer(
@@ -98,70 +133,104 @@ class _MainScreenState extends State<MainScreen> {
             children: [
               Container(
                 padding: const EdgeInsets.all(24),
-                decoration: const BoxDecoration(color: Color(0xFF1A73E8)),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                decoration: BoxDecoration(color: primaryColor),
+                child: Row(
                   children: [
-                    Icon(Icons.psychology_rounded,
-                        color: Colors.white, size: 36),
-                    SizedBox(height: 8),
-                    Text('ConfidAI',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold)),
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      backgroundImage: _avatarPath != null && File(_avatarPath!).existsSync()
+                          ? FileImage(File(_avatarPath!)) as ImageProvider
+                          : null,
+                      child: _avatarPath == null || !File(_avatarPath!).existsSync()
+                          ? Text(
+                              _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_userName,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold)),
+                          const Text('ConfidAI Companion',
+                              style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12)),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
               _drawerItem(Icons.home_rounded, 'Home', () {
                 Navigator.pop(context);
                 setState(() => _currentIndex = 0);
-              }),
+              }, primaryColor),
               _drawerItem(Icons.history_rounded, 'History', () {
                 Navigator.pop(context);
                 setState(() => _currentIndex = 1);
-              }),
+              }, primaryColor),
               _drawerItem(Icons.person_rounded, 'Profile', () {
                 Navigator.pop(context);
                 setState(() => _currentIndex = 2);
-              }),
+              }, primaryColor),
               const Divider(),
-              _drawerItem(Icons.notifications_rounded, 'Notifications', () {
+              _drawerItem(Icons.edit_note_rounded, 'Edit Profile', () async {
+                Navigator.pop(context);
+                final updated = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                );
+                if (updated == true) {
+                  _loadDrawerProfile();
+                }
+              }, primaryColor),
+              _drawerItem(Icons.settings_suggest_rounded, 'Theme & Settings', () {
                 Navigator.pop(context);
                 Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const NotificationsScreen()));
-              }),
+              }, primaryColor),
               _drawerItem(Icons.bar_chart_rounded, 'Progress Report', () {
                 Navigator.pop(context);
                 Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const ProgressReportScreen()));
-              }),
+              }, primaryColor),
               _drawerItem(Icons.help_outline_rounded, 'Help & Support', () {
                 Navigator.pop(context);
                 Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
-              }),
+              }, primaryColor),
               _drawerItem(Icons.info_outline_rounded, 'About App', () {
                 Navigator.pop(context);
                 Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const AboutScreen()));
-              }),
+              }, primaryColor),
               _drawerItem(Icons.lightbulb_outline_rounded, 'Tips Library', () {
                 Navigator.pop(context);
                 Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const TipsLibraryScreen()));
-              }),
+              }, primaryColor),
               _drawerItem(Icons.emoji_events_outlined, 'Achievements', () {
                 Navigator.pop(context);
                 Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const AchievementsScreen()));
-              }),
+              }, primaryColor),
               const Spacer(),
               const Divider(),
               _drawerItem(Icons.logout_rounded, 'Logout', () {
                 Navigator.pop(context);
                 _logout();
-              }),
+              }, primaryColor),
               const SizedBox(height: 12),
             ],
           ),
@@ -170,7 +239,7 @@ class _MainScreenState extends State<MainScreen> {
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        selectedItemColor: const Color(0xFF1A73E8),
+        selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
@@ -186,12 +255,16 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// ── NOTIFICATIONS SCREEN ────────────────────────────────────────
+// ── NOTIFICATIONS & SETTINGS SCREEN ────────────────────────────────
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = AppThemeProvider.of(context);
+    final primaryColor = themeProvider.primaryColor;
+    final isDark = themeProvider.isDarkMode;
+
     final notifications = [
       {'icon': '🎯', 'title': 'Practice Reminder', 'body': 'You haven\'t practiced today. Record a session to keep your streak!', 'time': '2 hours ago'},
       {'icon': '🏆', 'title': 'New Achievement', 'body': 'Congratulations! You completed 3 sessions this week.', 'time': 'Yesterday'},
@@ -201,78 +274,191 @@ class NotificationsScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       appBar: AppBar(
-        title: const Text('Notifications',
+        title: const Text('Notifications & Settings',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: ListView.builder(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        itemCount: notifications.length,
-        itemBuilder: (context, index) {
-          final n = notifications[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2)),
-              ],
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A73E8).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                      child: Text(n['icon']!,
-                          style: const TextStyle(fontSize: 22))),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Theme Settings Card
+            Container(
+              padding: const EdgeInsets.all(18),
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('App Theme & Appearance',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      const Row(
                         children: [
-                          Text(n['title']!,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: Color(0xFF1A1A2E))),
-                          Text(n['time']!,
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[500])),
+                          Icon(Icons.dark_mode_rounded, size: 20),
+                          SizedBox(width: 10),
+                          Text('Dark Mode',
+                              style: TextStyle(fontWeight: FontWeight.w500)),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(n['body']!,
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              height: 1.4)),
+                      Switch(
+                        value: themeProvider.isDarkMode,
+                        activeColor: primaryColor,
+                        onChanged: (val) => themeProvider.setDarkMode(val),
+                      ),
                     ],
                   ),
-                ),
+                  const Divider(height: 24),
+                  const Text('Accent Color Choice',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey)),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _colorSwatch(context, 'blue', 'Ocean Blue',
+                          const Color(0xFF1A73E8)),
+                      _colorSwatch(context, 'orange', 'Sunset Orange',
+                          const Color(0xFFFF6D00)),
+                      _colorSwatch(context, 'green', 'Forest Green',
+                          const Color(0xFF2E7D32)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            Text('Recent Notifications',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
+            const SizedBox(height: 12),
+            ...notifications.map((n) => Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2)),
+                    ],
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                            child: Text(n['icon']!,
+                                style: const TextStyle(fontSize: 22))),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(n['title']!,
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: isDark
+                                            ? Colors.white
+                                            : const Color(0xFF1A1A2E))),
+                                Text(n['time']!,
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[500])),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(n['body']!,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark
+                                        ? Colors.white70
+                                        : Colors.grey[600],
+                                    height: 1.4)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _colorSwatch(
+      BuildContext context, String code, String label, Color color) {
+    final themeProvider = AppThemeProvider.of(context);
+    final isSelected = themeProvider.accentName == code;
+
+    return GestureDetector(
+      onTap: () => themeProvider.setAccentColor(code),
+      child: Column(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: isSelected
+                  ? Border.all(color: Colors.white, width: 3)
+                  : null,
+              boxShadow: [
+                BoxShadow(
+                    color: color.withOpacity(0.4),
+                    blurRadius: isSelected ? 10 : 4)
               ],
             ),
-          );
-        },
+            child: isSelected
+                ? const Icon(Icons.check, color: Colors.white, size: 22)
+                : null,
+          ),
+          const SizedBox(height: 6),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? color : Colors.grey)),
+        ],
       ),
     );
   }
@@ -307,8 +493,140 @@ class _ProgressReportScreenState
     });
   }
 
+  void _exportCsv() {
+    if (_sessions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No session history to export')),
+      );
+      return;
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln(
+        'Date,Time,Duration,Overall Score %,Posture Score %,Head Stability Score %,Gesture Score %');
+
+    for (final s in _sessions) {
+      final date = s['date'] ?? '';
+      final time = s['time'] ?? '';
+      final duration = s['duration'] ?? '';
+      final score = s['score'] ?? 0;
+      final posture = s['posture_score'] ?? score;
+      final head = s['head_stability_score'] ?? score;
+      final gesture = s['gesture_score'] ?? score;
+
+      buffer.writeln(
+          '"$date","$time","$duration",$score,$posture,$head,$gesture');
+    }
+
+    Share.share(
+      buffer.toString(),
+      subject: 'ConfidAI_Session_History.csv',
+    );
+  }
+
+  Widget _buildStreakCalendar(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+    final now = DateTime.now();
+
+    // Generate last 28 days (4 rows of 7 days)
+    final days = List.generate(28, (i) => now.subtract(Duration(days: 27 - i)));
+
+    // Extract completed session dates set
+    final Set<String> sessionDates = _sessions.map((s) {
+      return s['date'] as String? ?? '';
+    }).toSet();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Streak Calendar (Last 28 Days)',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                ),
+              ),
+              Icon(Icons.calendar_month_rounded, color: primaryColor, size: 20),
+            ],
+          ),
+          const SizedBox(height: 16),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1,
+            ),
+            itemCount: days.length,
+            itemBuilder: (context, index) {
+              final day = days[index];
+              const months = [
+                'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+              ];
+              final dateKey =
+                  '${day.day} ${months[day.month - 1]} ${day.year}';
+              final hasSession = sessionDates.contains(dateKey);
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: hasSession
+                      ? primaryColor
+                      : (isDark ? Colors.white10 : Colors.grey[100]),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: hasSession
+                        ? primaryColor
+                        : (isDark ? Colors.white24 : Colors.grey[300]!),
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    '${day.day}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight:
+                          hasSession ? FontWeight.bold : FontWeight.normal,
+                      color: hasSession
+                          ? Colors.white
+                          : (isDark ? Colors.white70 : Colors.grey[600]),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
     final avgScore = _sessions.isEmpty
         ? 0
         : (_sessions.map((s) => s['score'] as int).reduce((a, b) => a + b) /
@@ -322,12 +640,12 @@ class _ProgressReportScreenState
     final totalSessions = _sessions.length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       appBar: AppBar(
         title: const Text('Progress Report',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -342,28 +660,33 @@ class _ProgressReportScreenState
                         'Total Sessions',
                         '$totalSessions',
                         Icons.video_library_rounded,
-                        const Color(0xFF1A73E8))),
+                        primaryColor,
+                        isDark)),
                 const SizedBox(width: 12),
                 Expanded(
                     child: _summaryCard(
                         'Best Score',
                         '$bestScore%',
                         Icons.emoji_events_rounded,
-                        const Color(0xFFF59E0B))),
+                        const Color(0xFFF59E0B),
+                        isDark)),
                 const SizedBox(width: 12),
                 Expanded(
                     child: _summaryCard(
                         'Average',
                         '$avgScore%',
                         Icons.trending_up_rounded,
-                        const Color(0xFF10B981))),
+                        const Color(0xFF10B981),
+                        isDark)),
               ],
             ),
             const SizedBox(height: 24),
+
+            // Performance Level
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -374,11 +697,11 @@ class _ProgressReportScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Performance Level',
+                  Text('Performance Level',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Color(0xFF1A1A2E))),
+                          color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
                   const SizedBox(height: 16),
                   _levelBar('Beginner', 0, 40, avgScore,
                       const Color(0xFFEF4444)),
@@ -386,8 +709,7 @@ class _ProgressReportScreenState
                   _levelBar('Developing', 40, 65, avgScore,
                       const Color(0xFFF59E0B)),
                   const SizedBox(height: 8),
-                  _levelBar('Proficient', 65, 80, avgScore,
-                      const Color(0xFF1A73E8)),
+                  _levelBar('Proficient', 65, 80, avgScore, primaryColor),
                   const SizedBox(height: 8),
                   _levelBar('Expert', 80, 100, avgScore,
                       const Color(0xFF10B981)),
@@ -395,17 +717,40 @@ class _ProgressReportScreenState
               ),
             ),
             const SizedBox(height: 24),
-            const Text('Session History',
+
+            // Streak Calendar View
+            _buildStreakCalendar(context),
+
+            // CSV Export Button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _exportCsv,
+                icon: Icon(Icons.file_download_outlined, color: primaryColor),
+                label: Text('Export Session History (CSV)',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: primaryColor)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: BorderSide(color: primaryColor),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            Text('Session History',
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
-                    color: Color(0xFF1A1A2E))),
+                    color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
             const SizedBox(height: 12),
             if (_sessions.isEmpty)
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Center(
@@ -449,7 +794,7 @@ class _ProgressReportScreenState
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
@@ -481,10 +826,12 @@ class _ProgressReportScreenState
                                 CrossAxisAlignment.start,
                             children: [
                               Text('Session ${_sessions.length - i}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
-                                      color: Color(0xFF1A1A2E))),
+                                      color: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF1A1A2E))),
                               Text(s['date'] ?? '',
                                   style: TextStyle(
                                       fontSize: 12,
@@ -509,11 +856,11 @@ class _ProgressReportScreenState
   }
 
   Widget _summaryCard(
-      String label, String value, IconData icon, Color color) {
+      String label, String value, IconData icon, Color color, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
@@ -583,7 +930,8 @@ class SessionDetailScreen extends StatelessWidget {
 
   const SessionDetailScreen({super.key, required this.session});
 
-  Widget _scoreBar(String label, double value) {
+  Widget _scoreBar(BuildContext context, String label, double value) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -600,8 +948,7 @@ class SessionDetailScreen extends StatelessWidget {
               Text('${(value * 100).toInt()}%',
                   style: const TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A2E))),
+                      fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 6),
@@ -612,7 +959,7 @@ class SessionDetailScreen extends StatelessWidget {
               minHeight: 8,
               backgroundColor: Colors.grey[200],
               valueColor: AlwaysStoppedAnimation<Color>(
-                  value <= 0 ? Colors.red : const Color(0xFF1A73E8)),
+                  value <= 0 ? Colors.red : primaryColor),
             ),
           ),
         ],
@@ -622,6 +969,9 @@ class SessionDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
     final double overallScore = (session['score'] as num?)?.toDouble() ?? 0.0;
     final double postureScore =
         (session['posture_score'] as num?)?.toDouble() ?? overallScore;
@@ -634,12 +984,12 @@ class SessionDetailScreen extends StatelessWidget {
     final String duration = session['duration'] as String? ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       appBar: AppBar(
         title: const Text('Session Breakdown',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -651,15 +1001,15 @@ class SessionDetailScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1A73E8), Color(0xFF0D47A1)],
+                gradient: LinearGradient(
+                  colors: [primaryColor, primaryColor.withOpacity(0.8)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                      color: const Color(0xFF1A73E8).withOpacity(0.3),
+                      color: primaryColor.withOpacity(0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4)),
                 ],
@@ -712,7 +1062,7 @@ class SessionDetailScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -724,22 +1074,22 @@ class SessionDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Score Breakdown',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A2E),
+                      color: isDark ? Colors.white : const Color(0xFF1A1A2E),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _scoreBar('Posture Alignment',
+                  _scoreBar(context, 'Posture Alignment',
                       (postureScore / 100).clamp(0.0, 1.0)),
-                  _scoreBar('Head Stability',
+                  _scoreBar(context, 'Head Stability',
                       (headScore / 100).clamp(0.0, 1.0)),
-                  _scoreBar('Hand Gestures',
+                  _scoreBar(context, 'Hand Gestures',
                       (gestureScore / 100).clamp(0.0, 1.0)),
-                  _scoreBar('Overall Presence',
+                  _scoreBar(context, 'Overall Presence',
                       (overallScore / 100).clamp(0.0, 1.0)),
                 ],
               ),
@@ -757,6 +1107,9 @@ class HelpSupportScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
     final faqs = [
       {
         'q': 'How does the AI analyze my body language?',
@@ -791,12 +1144,12 @@ class HelpSupportScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       appBar: AppBar(
         title: const Text('Help & Support',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -807,8 +1160,8 @@ class HelpSupportScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1A73E8), Color(0xFF0D47A1)],
+                gradient: LinearGradient(
+                  colors: [primaryColor, primaryColor.withOpacity(0.8)],
                 ),
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -840,16 +1193,16 @@ class HelpSupportScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            const Text('Frequently Asked Questions',
+            Text('Frequently Asked Questions',
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
-                    color: Color(0xFF1A1A2E))),
+                    color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
             const SizedBox(height: 12),
             ...faqs.map((faq) => Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -859,10 +1212,12 @@ class HelpSupportScreen extends StatelessWidget {
                   ),
                   child: ExpansionTile(
                     title: Text(faq['q']!,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A1A2E))),
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1A1A2E))),
                     children: [
                       Padding(
                         padding: const EdgeInsets.fromLTRB(
@@ -870,7 +1225,9 @@ class HelpSupportScreen extends StatelessWidget {
                         child: Text(faq['a']!,
                             style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey[600],
+                                color: isDark
+                                    ? Colors.white70
+                                    : Colors.grey[600],
                                 height: 1.5)),
                       )
                     ],
@@ -880,7 +1237,7 @@ class HelpSupportScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -891,19 +1248,19 @@ class HelpSupportScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Contact Us',
+                  Text('Contact Us',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Color(0xFF1A1A2E))),
+                          color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
                   const SizedBox(height: 12),
-                  _contactRow(Icons.email_rounded,
+                  _contactRow(context, Icons.email_rounded,
                       'mohithapapudesi14@gmail.com'),
                   const SizedBox(height: 8),
-                  _contactRow(Icons.language_rounded,
+                  _contactRow(context, Icons.language_rounded,
                       'confidai-b469a.web.app'),
                   const SizedBox(height: 8),
-                  _contactRow(Icons.code_rounded,
+                  _contactRow(context, Icons.code_rounded,
                       'github.com/Mohitha1406/body-language-app'),
                 ],
               ),
@@ -914,14 +1271,15 @@ class HelpSupportScreen extends StatelessWidget {
     );
   }
 
-  Widget _contactRow(IconData icon, String text) {
+  Widget _contactRow(BuildContext context, IconData icon, String text) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFF1A73E8), size: 18),
+        Icon(icon, color: primaryColor, size: 18),
         const SizedBox(width: 10),
         Text(text,
-            style: TextStyle(
-                fontSize: 13, color: Colors.grey[700])),
+            style: const TextStyle(
+                fontSize: 13, color: Colors.grey)),
       ],
     );
   }
@@ -938,6 +1296,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _userName = 'User';
   String _userInitials = 'U';
+  String? _avatarPath;
   int _latestScore = -1;
   int _bestScore = -1;
   int _totalSessions = 0;
@@ -957,6 +1316,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? 'User';
+    final avatar = prefs.getString('user_avatar_path');
     final List<String> raw =
         prefs.getStringList('sessions') ?? [];
 
@@ -976,6 +1336,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) {
       setState(() {
         _userName = name;
+        _avatarPath = avatar;
         _userInitials = name
             .trim()
             .split(' ')
@@ -1024,12 +1385,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _tipCard(String emoji, String title, String desc) {
+  Widget _tipCard(BuildContext context, String emoji, String title, String desc) {
+    final isDark = AppThemeProvider.of(context).isDarkMode;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -1047,12 +1409,14 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
-                        color: Color(0xFF1A1A2E))),
+                        color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
                 Text(desc,
-                    style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white70 : Colors.grey[600])),
               ],
             ),
           ),
@@ -1063,8 +1427,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadData,
@@ -1081,24 +1448,43 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Hello, $_userName 👋',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A1A2E))),
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF1A1A2E))),
                         const SizedBox(height: 4),
                         Text('Ready to improve your body language?',
                             style: TextStyle(
                                 fontSize: 13, color: Colors.grey[600])),
                       ],
                     ),
-                    CircleAvatar(
-                      backgroundColor: const Color(0xFF1A73E8),
-                      radius: 22,
-                      child: Text(_userInitials,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14)),
+                    GestureDetector(
+                      onTap: () async {
+                        final updated = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const EditProfileScreen()),
+                        );
+                        if (updated == true) _loadData();
+                      },
+                      child: CircleAvatar(
+                        backgroundColor: primaryColor,
+                        radius: 22,
+                        backgroundImage: _avatarPath != null &&
+                                File(_avatarPath!).existsSync()
+                            ? FileImage(File(_avatarPath!)) as ImageProvider
+                            : null,
+                        child: _avatarPath == null ||
+                                !File(_avatarPath!).existsSync()
+                            ? Text(_userInitials,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14))
+                            : null,
+                      ),
                     ),
                   ],
                 ),
@@ -1107,15 +1493,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF1A73E8), Color(0xFF0D47A1)],
+                    gradient: LinearGradient(
+                      colors: [primaryColor, primaryColor.withOpacity(0.8)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                          color: const Color(0xFF1A73E8).withOpacity(0.3),
+                          color: primaryColor.withOpacity(0.3),
                           blurRadius: 16,
                           offset: const Offset(0, 6)),
                     ],
@@ -1165,7 +1551,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -1180,14 +1566,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           width: 52,
                           height: 52,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A73E8).withOpacity(0.1),
+                            color: primaryColor.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(Icons.videocam_rounded,
-                              color: Color(0xFF1A73E8), size: 28),
+                          child: Icon(Icons.videocam_rounded,
+                              color: primaryColor, size: 28),
                         ),
                         const SizedBox(width: 16),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1195,9 +1581,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1A1A2E))),
-                              SizedBox(height: 4),
-                              Text('Record video and get confidence score',
+                                      color: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF1A1A2E))),
+                              const SizedBox(height: 4),
+                              const Text('Record video and get confidence score',
                                   style: TextStyle(
                                       fontSize: 12, color: Colors.grey)),
                             ],
@@ -1210,19 +1598,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text('Quick Tips',
+                Text('Quick Tips',
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A2E))),
+                        color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
                 const SizedBox(height: 12),
-                _tipCard('🧍', 'Straight Posture',
+                _tipCard(context, '🧍', 'Straight Posture',
                     'Keep your spine straight and shoulders relaxed'),
-                _tipCard('🤲', 'Controlled Gestures',
+                _tipCard(context, '🤲', 'Controlled Gestures',
                     'Use purposeful hand movements to emphasize points'),
-                _tipCard('👁️', 'Eye Contact',
+                _tipCard(context, '👁️', 'Eye Contact',
                     'Maintain steady eye contact with your audience'),
-                _tipCard('🎙️', 'Steady Head',
+                _tipCard(context, '🎙️', 'Steady Head',
                     'Avoid excessive nodding or head movements'),
               ],
             ),
@@ -1245,6 +1633,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _userName = 'User';
   String _userEmail = '';
   String _userInitials = 'U';
+  String? _avatarPath;
   int _totalSessions = 0;
   int _bestScore = -1;
 
@@ -1258,6 +1647,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? 'User';
     final email = prefs.getString('user_email') ?? '';
+    final avatar = prefs.getString('user_avatar_path');
     final List<String> raw = prefs.getStringList('sessions') ?? [];
 
     int bestScore = -1;
@@ -1272,6 +1662,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _userName = name;
       _userEmail = email;
+      _avatarPath = avatar;
       _userInitials = name
           .trim()
           .split(' ')
@@ -1296,11 +1687,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Widget _profileStat(String value, String label) {
+  Widget _profileStat(BuildContext context, String value, String label) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
@@ -1312,10 +1706,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         children: [
           Text(value,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A73E8))),
+                  color: primaryColor)),
           const SizedBox(height: 4),
           Text(label,
               style: TextStyle(fontSize: 11, color: Colors.grey[600])),
@@ -1324,14 +1718,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _settingItem(IconData icon, String title, {VoidCallback? onTap}) {
+  Widget _settingItem(BuildContext context, IconData icon, String title,
+      {VoidCallback? onTap}) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -1342,13 +1740,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFF1A73E8), size: 22),
+            Icon(icon, color: primaryColor, size: 22),
             const SizedBox(width: 14),
             Text(title,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF1A1A2E))),
+                    color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
             const Spacer(),
             Icon(Icons.arrow_forward_ios_rounded,
                 size: 14, color: Colors.grey[400]),
@@ -1360,29 +1758,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
               const SizedBox(height: 20),
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: const Color(0xFF1A73E8),
-                child: Text(_userInitials,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold)),
+              GestureDetector(
+                onTap: () async {
+                  final updated = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen()),
+                  );
+                  if (updated == true) _loadUser();
+                },
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: primaryColor,
+                  backgroundImage: _avatarPath != null &&
+                          File(_avatarPath!).existsSync()
+                      ? FileImage(File(_avatarPath!)) as ImageProvider
+                      : null,
+                  child: _avatarPath == null || !File(_avatarPath!).existsSync()
+                      ? Text(_userInitials,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold))
+                      : null,
+                ),
               ),
               const SizedBox(height: 16),
               Text(_userName,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A2E))),
+                      color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
               const SizedBox(height: 4),
               Text(_userEmail,
                   style:
@@ -1391,17 +1808,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _profileStat('$_totalSessions', 'Sessions'),
+                  _profileStat(context, '$_totalSessions', 'Sessions'),
                   _profileStat(
+                      context,
                       _bestScore == -1 ? '--' : '$_bestScore%',
                       'Best Score'),
-                  _profileStat('$_totalSessions', 'Streak'),
+                  _profileStat(context, '$_totalSessions', 'Streak'),
                 ],
               ),
               const SizedBox(height: 32),
               _settingItem(
-                Icons.notifications_rounded,
-                'Notifications',
+                context,
+                Icons.edit_note_rounded,
+                'Edit Profile',
+                onTap: () async {
+                  final updated = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen()),
+                  );
+                  if (updated == true) _loadUser();
+                },
+              ),
+              _settingItem(
+                context,
+                Icons.settings_suggest_rounded,
+                'Theme & Settings',
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -1409,6 +1841,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               _settingItem(
+                context,
                 Icons.bar_chart_rounded,
                 'Progress Report',
                 onTap: () => Navigator.push(
@@ -1418,6 +1851,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               _settingItem(
+                context,
                 Icons.help_outline_rounded,
                 'Help & Support',
                 onTap: () => Navigator.push(
@@ -1427,6 +1861,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               _settingItem(
+                context,
                 Icons.info_outline_rounded,
                 'About App',
                 onTap: () => Navigator.push(
@@ -1437,6 +1872,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 8),
               _settingItem(
+                context,
                 Icons.logout_rounded,
                 'Logout',
                 onTap: _logout,

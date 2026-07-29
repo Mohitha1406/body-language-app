@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'theme_provider.dart';
 import 'main.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -74,11 +75,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       appBar: AppBar(
         title: const Text('Session History'),
-        backgroundColor: const Color(0xFF1A73E8),
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
