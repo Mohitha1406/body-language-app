@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'theme_provider.dart';
 import 'notifications_service.dart';
+import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
 import 'history_screen.dart';
 import 'camera_screen.dart';
@@ -139,10 +140,8 @@ class _MainScreenState extends State<MainScreen> {
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: Colors.white.withOpacity(0.2),
-                      backgroundImage: _avatarPath != null && File(_avatarPath!).existsSync()
-                          ? FileImage(File(_avatarPath!)) as ImageProvider
-                          : null,
-                      child: _avatarPath == null || !File(_avatarPath!).existsSync()
+                      backgroundImage: getAvatarImageProvider(_avatarPath),
+                      child: getAvatarImageProvider(_avatarPath) == null
                           ? Text(
                               _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
                               style: const TextStyle(
@@ -185,17 +184,17 @@ class _MainScreenState extends State<MainScreen> {
                 setState(() => _currentIndex = 2);
               }, primaryColor),
               const Divider(),
-              _drawerItem(Icons.edit_note_rounded, 'Edit Profile', () async {
+              _drawerItem(Icons.settings_rounded, 'Settings', () async {
                 Navigator.pop(context);
                 final updated = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 );
                 if (updated == true) {
                   _loadDrawerProfile();
                 }
               }, primaryColor),
-              _drawerItem(Icons.settings_suggest_rounded, 'Theme & Settings', () {
+              _drawerItem(Icons.notifications_rounded, 'Notifications', () {
                 Navigator.pop(context);
                 Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const NotificationsScreen()));
@@ -262,7 +261,7 @@ class NotificationsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       appBar: AppBar(
-        title: const Text('Notifications & Settings',
+        title: const Text('Notifications',
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
@@ -273,68 +272,6 @@ class NotificationsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Theme Settings Card
-            Container(
-              padding: const EdgeInsets.all(18),
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2)),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('App Theme & Appearance',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.dark_mode_rounded, size: 20),
-                          SizedBox(width: 10),
-                          Text('Dark Mode',
-                              style: TextStyle(fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                      Switch(
-                        value: themeProvider.isDarkMode,
-                        activeColor: primaryColor,
-                        onChanged: (val) => themeProvider.setDarkMode(val),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24),
-                  const Text('Accent Color Choice',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey)),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _colorSwatch(context, 'blue', 'Ocean Blue',
-                          const Color(0xFF1A73E8)),
-                      _colorSwatch(context, 'orange', 'Sunset Orange',
-                          const Color(0xFFFF6D00)),
-                      _colorSwatch(context, 'green', 'Forest Green',
-                          const Color(0xFF2E7D32)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
 
             Text('Recent Notifications',
                 style: TextStyle(
@@ -1447,23 +1384,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     GestureDetector(
-                      onTap: () async {
-                        final updated = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const EditProfileScreen()),
-                        );
-                        if (updated == true) _loadData();
+                      onTap: () {
+                        setState(() => _currentIndex = 2);
                       },
                       child: CircleAvatar(
                         backgroundColor: primaryColor,
                         radius: 22,
-                        backgroundImage: _avatarPath != null &&
-                                File(_avatarPath!).existsSync()
-                            ? FileImage(File(_avatarPath!)) as ImageProvider
-                            : null,
-                        child: _avatarPath == null ||
-                                !File(_avatarPath!).existsSync()
+                        backgroundImage: getAvatarImageProvider(_avatarPath),
+                        child: getAvatarImageProvider(_avatarPath) == null
                             ? Text(_userInitials,
                                 style: const TextStyle(
                                     color: Colors.white,
@@ -1758,11 +1686,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               CircleAvatar(
                 radius: 50,
                 backgroundColor: primaryColor,
-                backgroundImage: _avatarPath != null &&
-                        File(_avatarPath!).existsSync()
-                    ? FileImage(File(_avatarPath!)) as ImageProvider
-                    : null,
-                child: _avatarPath == null || !File(_avatarPath!).existsSync()
+                backgroundImage: getAvatarImageProvider(_avatarPath),
+                child: getAvatarImageProvider(_avatarPath) == null
                     ? Text(_userInitials,
                         style: const TextStyle(
                             color: Colors.white,
@@ -1800,12 +1725,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     final updated = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const EditProfileScreen()),
+                          builder: (_) => const SettingsScreen()),
                     );
                     if (updated == true) _loadUser();
                   },
-                  icon: const Icon(Icons.edit_rounded, size: 18),
-                  label: const Text('Edit Profile',
+                  icon: const Icon(Icons.settings_rounded, size: 18),
+                  label: const Text('Edit Settings & Profile',
                       style: TextStyle(fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
