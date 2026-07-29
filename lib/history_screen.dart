@@ -80,13 +80,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
-      appBar: AppBar(
-        title: const Text('Session History'),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-      ),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(

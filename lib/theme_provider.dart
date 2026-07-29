@@ -11,9 +11,9 @@ class ThemeProvider extends ChangeNotifier {
   Color get primaryColor {
     switch (_accentName) {
       case 'orange':
-        return const Color(0xFFFF6D00); // Sunset Orange
+        return const Color(0xFFC84B31); // Muted Terracotta / Sunset Orange
       case 'green':
-        return const Color(0xFF2E7D32); // Forest Green
+        return const Color(0xFF1B5E20); // Deep Forest Emerald Green
       case 'blue':
       default:
         return const Color(0xFF1A73E8); // Ocean Blue

@@ -237,20 +237,6 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ),
       body: _screens[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: primaryColor,
-        unselectedItemColor: Colors.grey,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.history_rounded), label: 'History'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person_rounded), label: 'Profile'),
-        ],
-      ),
     );
   }
 }
@@ -1769,30 +1755,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             children: [
               const SizedBox(height: 20),
-              GestureDetector(
-                onTap: () async {
-                  final updated = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const EditProfileScreen()),
-                  );
-                  if (updated == true) _loadUser();
-                },
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundColor: primaryColor,
-                  backgroundImage: _avatarPath != null &&
-                          File(_avatarPath!).existsSync()
-                      ? FileImage(File(_avatarPath!)) as ImageProvider
-                      : null,
-                  child: _avatarPath == null || !File(_avatarPath!).existsSync()
-                      ? Text(_userInitials,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold))
-                      : null,
-                ),
+              CircleAvatar(
+                radius: 50,
+                backgroundColor: primaryColor,
+                backgroundImage: _avatarPath != null &&
+                        File(_avatarPath!).existsSync()
+                    ? FileImage(File(_avatarPath!)) as ImageProvider
+                    : null,
+                child: _avatarPath == null || !File(_avatarPath!).existsSync()
+                    ? Text(_userInitials,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold))
+                    : null,
               ),
               const SizedBox(height: 16),
               Text(_userName,
@@ -1816,20 +1792,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _profileStat(context, '$_totalSessions', 'Streak'),
                 ],
               ),
-              const SizedBox(height: 32),
-              _settingItem(
-                context,
-                Icons.edit_note_rounded,
-                'Edit Profile',
-                onTap: () async {
-                  final updated = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const EditProfileScreen()),
-                  );
-                  if (updated == true) _loadUser();
-                },
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final updated = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen()),
+                    );
+                    if (updated == true) _loadUser();
+                  },
+                  icon: const Icon(Icons.edit_rounded, size: 18),
+                  label: const Text('Edit Profile',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
               ),
+              const SizedBox(height: 24),
               _settingItem(
                 context,
                 Icons.settings_suggest_rounded,

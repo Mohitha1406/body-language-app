@@ -455,11 +455,7 @@ class _CameraScreenState extends State<CameraScreen> {
                     ),
                   ),
 
-                if (_isRecording)
-                  CustomPaint(
-                    painter: SkeletonPainter(),
-                    size: Size.infinite,
-                  ),
+
 
                 if (_isAnalyzing)
                   Container(
@@ -700,39 +696,4 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 }
 
-class SkeletonPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.greenAccent.withOpacity(0.6)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-    final dotPaint = Paint()
-      ..color = Colors.greenAccent
-      ..style = PaintingStyle.fill;
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    canvas.drawCircle(Offset(cx, cy - 80), 20, dotPaint);
-    canvas.drawLine(Offset(cx, cy - 60), Offset(cx, cy - 40), paint);
-    canvas.drawLine(Offset(cx - 60, cy - 40), Offset(cx + 60, cy - 40), paint);
-    canvas.drawLine(Offset(cx - 60, cy - 40), Offset(cx - 90, cy + 20), paint);
-    canvas.drawLine(Offset(cx + 60, cy - 40), Offset(cx + 90, cy + 20), paint);
-    canvas.drawLine(Offset(cx, cy - 40), Offset(cx, cy + 40), paint);
-    canvas.drawLine(Offset(cx, cy + 40), Offset(cx - 40, cy + 120), paint);
-    canvas.drawLine(Offset(cx, cy + 40), Offset(cx + 40, cy + 120), paint);
-    for (final offset in [
-      Offset(cx - 60, cy - 40),
-      Offset(cx + 60, cy - 40),
-      Offset(cx - 90, cy + 20),
-      Offset(cx + 90, cy + 20),
-      Offset(cx, cy + 40),
-      Offset(cx - 40, cy + 120),
-      Offset(cx + 40, cy + 120),
-    ]) {
-      canvas.drawCircle(offset, 5, dotPaint);
-    }
-  }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
