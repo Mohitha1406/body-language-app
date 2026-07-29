@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'theme_provider.dart';
 import 'notifications_service.dart';
+import 'onboarding_screen.dart';
 import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
 import 'history_screen.dart';
@@ -24,6 +25,7 @@ void main() async {
   );
   final prefs = await SharedPreferences.getInstance();
   final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+  final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
 
   final themeProvider = await ThemeProvider.create();
   await NotificationService.init();
@@ -32,14 +34,22 @@ void main() async {
   runApp(
     AppThemeProvider(
       themeProvider: themeProvider,
-      child: MyApp(isLoggedIn: isLoggedIn),
+      child: MyApp(
+        isLoggedIn: isLoggedIn,
+        hasSeenOnboarding: hasSeenOnboarding,
+      ),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
   final bool isLoggedIn;
-  const MyApp({super.key, required this.isLoggedIn});
+  final bool hasSeenOnboarding;
+  const MyApp({
+    super.key,
+    required this.isLoggedIn,
+    required this.hasSeenOnboarding,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +57,18 @@ class MyApp extends StatelessWidget {
     return ListenableBuilder(
       listenable: themeProvider,
       builder: (context, _) {
+        Widget initialHome;
+        if (!hasSeenOnboarding) {
+          initialHome = OnboardingScreen(isLoggedIn: isLoggedIn);
+        } else {
+          initialHome = isLoggedIn ? const MainScreen() : const LoginScreen();
+        }
+
         return MaterialApp(
           title: 'ConfidAI',
           debugShowCheckedModeBanner: false,
           theme: themeProvider.themeData,
-          home: isLoggedIn ? const MainScreen() : const LoginScreen(),
+          home: initialHome,
         );
       },
     );
@@ -416,6 +433,151 @@ class _ProgressReportScreenState
     });
   }
 
+  void _compareLast2Sessions() {
+    if (_sessions.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Need at least 2 practice sessions to compare')),
+      );
+      return;
+    }
+
+    final s1 = _sessions[0];
+    final s2 = _sessions[1];
+
+    final score1 = (s1['score'] as num?)?.toInt() ?? 0;
+    final score2 = (s2['score'] as num?)?.toInt() ?? 0;
+
+    final posture1 = (s1['posture_score'] as num?)?.toInt() ?? score1;
+    final posture2 = (s2['posture_score'] as num?)?.toInt() ?? score2;
+
+    final head1 = (s1['head_stability_score'] as num?)?.toInt() ?? score1;
+    final head2 = (s2['head_stability_score'] as num?)?.toInt() ?? score2;
+
+    final gesture1 = (s1['gesture_score'] as num?)?.toInt() ?? score1;
+    final gesture2 = (s2['gesture_score'] as num?)?.toInt() ?? score2;
+
+    Widget metricRow(String name, int val1, int val2) {
+      final diff = val1 - val2;
+      final diffText = diff > 0 ? '+$diff%' : '$diff%';
+      final diffColor = diff > 0
+          ? const Color(0xFF10B981)
+          : diff < 0
+              ? const Color(0xFFEF4444)
+              : Colors.grey;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              flex: 3,
+              child: Text(name,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w500, fontSize: 13)),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text('$val2%',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text('$val1%',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 13)),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(diffText,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: diffColor,
+                      fontSize: 13)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final isDark = AppThemeProvider.of(context).isDarkMode;
+        final primaryColor = AppThemeProvider.of(context).primaryColor;
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Compare Last 2 Sessions',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Expanded(flex: 3, child: SizedBox()),
+                  Expanded(
+                    flex: 2,
+                    child: Text('Session 2\n(${s2['date'] ?? ''})',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text('Session 1 (Latest)\n(${s1['date'] ?? ''})',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor)),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text('Diff',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              metricRow('Overall Score', score1, score2),
+              metricRow('Posture', posture1, posture2),
+              metricRow('Head Stability', head1, head2),
+              metricRow('Gestures', gesture1, gesture2),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _exportCsv() {
     if (_sessions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -644,6 +806,25 @@ class _ProgressReportScreenState
             // Streak Calendar View
             _buildStreakCalendar(context),
 
+            // Compare Last 2 Sessions Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _compareLast2Sessions,
+                icon: const Icon(Icons.compare_arrows_rounded),
+                label: const Text('Compare Last 2 Sessions',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
             // CSV Export Button
             SizedBox(
               width: double.infinity,
@@ -853,6 +1034,49 @@ class SessionDetailScreen extends StatelessWidget {
 
   const SessionDetailScreen({super.key, required this.session});
 
+  Future<void> _deleteSession(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Session',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('Delete this session? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> raw = prefs.getStringList('sessions') ?? [];
+      raw.removeWhere((s) {
+        final Map<String, dynamic> decoded = jsonDecode(s);
+        return decoded['date'] == session['date'] &&
+            decoded['time'] == session['time'];
+      });
+      await prefs.setStringList('sessions', raw);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Session deleted')),
+        );
+        Navigator.pop(context, true);
+      }
+    }
+  }
+
   Widget _scoreBar(BuildContext context, String label, double value) {
     final primaryColor = AppThemeProvider.of(context).primaryColor;
     return Padding(
@@ -914,6 +1138,12 @@ class SessionDetailScreen extends StatelessWidget {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded),
+            onPressed: () => _deleteSession(context),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -1735,7 +1965,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     if (updated == true) _loadUser();
                   },
                   icon: const Icon(Icons.settings_rounded, size: 18),
-                  label: const Text('Edit Settings & Profile',
+                  label: const Text('Settings',
                       style: TextStyle(fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,

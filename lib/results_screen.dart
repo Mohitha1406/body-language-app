@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'theme_provider.dart';
 
-class ResultsScreen extends StatelessWidget {
+class ResultsScreen extends StatefulWidget {
   final double confidenceScore;
   final double postureScore;
   final double headStabilityScore;
@@ -20,28 +22,141 @@ class ResultsScreen extends StatelessWidget {
     this.videoPath,
   });
 
+  @override
+  State<ResultsScreen> createState() => _ResultsScreenState();
+}
+
+class _ResultsScreenState extends State<ResultsScreen> {
+  int _userRating = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRating();
+  }
+
+  Future<void> _loadRating() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> raw = prefs.getStringList('sessions') ?? [];
+    if (raw.isNotEmpty) {
+      final Map<String, dynamic> firstSession =
+          jsonDecode(raw.first) as Map<String, dynamic>;
+      final rating = firstSession['rating'] as int? ?? 0;
+      if (mounted) {
+        setState(() {
+          _userRating = rating;
+        });
+      }
+    }
+  }
+
+  Future<void> _updateRating(int stars) async {
+    setState(() {
+      _userRating = stars;
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> raw = prefs.getStringList('sessions') ?? [];
+    if (raw.isNotEmpty) {
+      final Map<String, dynamic> firstSession =
+          jsonDecode(raw.first) as Map<String, dynamic>;
+      firstSession['rating'] = stars;
+      raw[0] = jsonEncode(firstSession);
+      await prefs.setStringList('sessions', raw);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Saved $stars-star session rating!')),
+        );
+      }
+    }
+  }
+
   Color _getScoreColor() {
-    if (confidenceScore <= 0) return const Color(0xFFEF4444);
-    if (confidenceScore >= 75) return const Color(0xFF10B981);
-    if (confidenceScore >= 50) return const Color(0xFFF59E0B);
+    if (widget.confidenceScore <= 0) return const Color(0xFFEF4444);
+    if (widget.confidenceScore >= 75) return const Color(0xFF10B981);
+    if (widget.confidenceScore >= 50) return const Color(0xFFF59E0B);
     return const Color(0xFFEF4444);
   }
 
   String _getScoreLabel() {
-    if (confidenceScore <= 0) return 'No Person';
-    if (confidenceScore >= 75) return 'Great!';
-    if (confidenceScore >= 50) return 'Average';
+    if (widget.confidenceScore <= 0) return 'No Person';
+    if (widget.confidenceScore >= 75) return 'Great!';
+    if (widget.confidenceScore >= 50) return 'Average';
     return 'Needs Work';
+  }
+
+  Widget _scoreBar(BuildContext context, String label, double value) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label,
+                  style: const TextStyle(fontSize: 13, color: Colors.grey)),
+              Text('${(value * 100).toInt()}%',
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: value,
+              minHeight: 8,
+              backgroundColor: Colors.grey[200],
+              valueColor: AlwaysStoppedAnimation<Color>(
+                  value <= 0 ? Colors.red : primaryColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _feedbackItem(String tip, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 2),
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.lightbulb_outline,
+                size: 12, color: Color(0xFFF59E0B)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(tip,
+                style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white70 : const Color(0xFF1A1A2E),
+                    height: 1.5)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isNoPerson = confidenceScore <= 0;
+    final bool isNoPerson = widget.confidenceScore <= 0;
     final primaryColor = AppThemeProvider.of(context).primaryColor;
     final isDark = AppThemeProvider.of(context).isDarkMode;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
+      backgroundColor:
+          isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
       appBar: AppBar(
         title: const Text('Analysis Results'),
         backgroundColor: primaryColor,
@@ -110,7 +225,7 @@ class ResultsScreen extends StatelessWidget {
                         width: 160,
                         height: 160,
                         child: CircularProgressIndicator(
-                          value: (confidenceScore / 100).clamp(0.0, 1.0),
+                          value: (widget.confidenceScore / 100).clamp(0.0, 1.0),
                           strokeWidth: 14,
                           backgroundColor: Colors.grey[200],
                           valueColor: AlwaysStoppedAnimation<Color>(
@@ -119,7 +234,7 @@ class ResultsScreen extends StatelessWidget {
                       ),
                       Column(
                         children: [
-                          Text('${confidenceScore.toInt()}%',
+                          Text('${widget.confidenceScore.toInt()}%',
                               style: TextStyle(
                                   fontSize: 40,
                                   fontWeight: FontWeight.bold,
@@ -133,7 +248,7 @@ class ResultsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (videoPath != null) ...[
+                  if (widget.videoPath != null) ...[
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -184,17 +299,74 @@ class ResultsScreen extends StatelessWidget {
                           color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
                   const SizedBox(height: 16),
                   _scoreBar(context, 'Posture Alignment',
-                      (postureScore / 100).clamp(0.0, 1.0)),
+                      (widget.postureScore / 100).clamp(0.0, 1.0)),
                   _scoreBar(context, 'Head Stability',
-                      (headStabilityScore / 100).clamp(0.0, 1.0)),
+                      (widget.headStabilityScore / 100).clamp(0.0, 1.0)),
                   _scoreBar(context, 'Hand Gestures',
-                      (gestureScore / 100).clamp(0.0, 1.0)),
+                      (widget.gestureScore / 100).clamp(0.0, 1.0)),
                   _scoreBar(context, 'Overall Presence',
-                      (confidenceScore / 100).clamp(0.0, 1.0)),
+                      (widget.confidenceScore / 100).clamp(0.0, 1.0)),
                 ],
               ),
             ),
             const SizedBox(height: 24),
+
+            // Rate Your Session Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Text('How helpful was this analysis?',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      final starIndex = index + 1;
+                      final isFilled = starIndex <= _userRating;
+                      return IconButton(
+                        icon: Icon(
+                          isFilled
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          color: isFilled
+                              ? const Color(0xFFF59E0B)
+                              : Colors.grey[400],
+                          size: 32,
+                        ),
+                        onPressed: () => _updateRating(starIndex),
+                      );
+                    }),
+                  ),
+                  if (_userRating > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Session rating: $_userRating / 5 stars',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF10B981),
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -217,7 +389,7 @@ class ResultsScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
                   const SizedBox(height: 16),
-                  ...feedback.map((tip) => _feedbackItem(tip, isDark)),
+                  ...widget.feedback.map((tip) => _feedbackItem(tip, isDark)),
                 ],
               ),
             ),
@@ -228,7 +400,7 @@ class ResultsScreen extends StatelessWidget {
                 onPressed: () {
                   final String label = _getScoreLabel();
                   final String shareText =
-                      "I scored ${confidenceScore.toInt()}% on ConfidAI - $label Level! 💪\nAnalyze your body language with ConfidAI!";
+                      "I scored ${widget.confidenceScore.toInt()}% on ConfidAI - $label Level! 💪\nAnalyze your body language with ConfidAI!";
                   Share.share(shareText);
                 },
                 icon: const Icon(Icons.share_rounded),
@@ -286,69 +458,4 @@ class ResultsScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _scoreBar(BuildContext context, String label, double value) {
-    final primaryColor = AppThemeProvider.of(context).primaryColor;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label,
-                  style: const TextStyle(fontSize: 13, color: Colors.grey)),
-              Text('${(value * 100).toInt()}%',
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: value,
-              minHeight: 8,
-              backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(
-                  value <= 0 ? Colors.red : primaryColor),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _feedbackItem(String tip, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 2),
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEF3C7),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.lightbulb_outline,
-                size: 12, color: Color(0xFFF59E0B)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(tip,
-                style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.white70 : const Color(0xFF1A1A2E),
-                    height: 1.5)),
-          ),
-        ],
-      ),
-    );
-  }
 }
-
