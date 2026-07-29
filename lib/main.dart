@@ -436,60 +436,69 @@ class _ProgressReportScreenState
                     : score >= 50
                         ? const Color(0xFFF59E0B)
                         : const Color(0xFFEF4444);
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 6)
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: scoreColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Text('$score%',
-                              style: TextStyle(
-                                  color: scoreColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13)),
-                        ),
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SessionDetailScreen(session: s),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            Text('Session ${_sessions.length - i}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Color(0xFF1A1A2E))),
-                            Text(s['date'] ?? '',
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 6)
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: scoreColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text('$score%',
                                 style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[500])),
-                          ],
+                                    color: scoreColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13)),
+                          ),
                         ),
-                      ),
-                      Icon(
-                        score >= 75
-                            ? Icons.trending_up_rounded
-                            : Icons.trending_flat_rounded,
-                        color: scoreColor,
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text('Session ${_sessions.length - i}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF1A1A2E))),
+                              Text(s['date'] ?? '',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[500])),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 16,
+                          color: Colors.grey[400],
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }),
@@ -564,6 +573,180 @@ class _ProgressReportScreenState
             style:
                 TextStyle(fontSize: 10, color: Colors.grey[500])),
       ],
+    );
+  }
+}
+
+// ── SESSION DETAIL SCREEN ─────────────────────────────────────────
+class SessionDetailScreen extends StatelessWidget {
+  final Map<String, dynamic> session;
+
+  const SessionDetailScreen({super.key, required this.session});
+
+  Widget _scoreBar(String label, double value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500)),
+              Text('${(value * 100).toInt()}%',
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A2E))),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: value,
+              minHeight: 8,
+              backgroundColor: Colors.grey[200],
+              valueColor: AlwaysStoppedAnimation<Color>(
+                  value <= 0 ? Colors.red : const Color(0xFF1A73E8)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double overallScore = (session['score'] as num?)?.toDouble() ?? 0.0;
+    final double postureScore =
+        (session['posture_score'] as num?)?.toDouble() ?? overallScore;
+    final double headScore =
+        (session['head_stability_score'] as num?)?.toDouble() ?? overallScore;
+    final double gestureScore =
+        (session['gesture_score'] as num?)?.toDouble() ?? overallScore;
+    final String date = session['date'] as String? ?? 'Session Detail';
+    final String time = session['time'] as String? ?? '';
+    final String duration = session['duration'] as String? ?? '';
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FF),
+      appBar: AppBar(
+        title: const Text('Session Breakdown',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1A1A2E),
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A73E8), Color(0xFF0D47A1)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                      color: const Color(0xFF1A73E8).withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${overallScore.toInt()}%',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          date,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '$time · $duration',
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Score Breakdown',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A2E),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _scoreBar('Posture Alignment',
+                      (postureScore / 100).clamp(0.0, 1.0)),
+                  _scoreBar('Head Stability',
+                      (headScore / 100).clamp(0.0, 1.0)),
+                  _scoreBar('Hand Gestures',
+                      (gestureScore / 100).clamp(0.0, 1.0)),
+                  _scoreBar('Overall Presence',
+                      (overallScore / 100).clamp(0.0, 1.0)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

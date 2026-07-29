@@ -7,7 +7,7 @@ import 'results_screen.dart';
 import 'history_screen.dart';
 
 // TODO: set this to your deployed backend URL, e.g. https://your-backend.onrender.com — a LAN IP will never work for a deployed web app.
-const String kBackendBaseUrl = 'https://confidai-ekznx62d.b4a.run';
+const String kBackendBaseUrl = 'https://body-language-app.onrender.com';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -189,7 +189,13 @@ class _CameraScreenState extends State<CameraScreen> {
           ? List<String>.from(result['tips'])
           : _getFeedback(realScore);
 
-      await HistoryScreen.addSession(realScore, duration: '$_selectedDuration sec');
+      await HistoryScreen.addSession(
+        realScore,
+        postureScore: postureScore,
+        headStabilityScore: headScore,
+        gestureScore: gestureScore,
+        duration: '$_selectedDuration sec',
+      );
       setState(() {
         _isAnalyzing = false;
       });
@@ -275,7 +281,13 @@ class _CameraScreenState extends State<CameraScreen> {
           ? List<String>.from(result['tips'])
           : _getFeedback(realScore);
 
-      await HistoryScreen.addSession(realScore, duration: 'Gallery Video');
+      await HistoryScreen.addSession(
+        realScore,
+        postureScore: postureScore,
+        headStabilityScore: headScore,
+        gestureScore: gestureScore,
+        duration: 'Gallery Video',
+      );
       setState(() {
         _isAnalyzing = false;
       });
@@ -306,6 +318,96 @@ class _CameraScreenState extends State<CameraScreen> {
         );
       }
     }
+  }
+
+  Future<void> _showCustomDurationDialog() async {
+    double tempVal = _selectedDuration.toDouble().clamp(5.0, 60.0);
+    final TextEditingController controller =
+        TextEditingController(text: '${tempVal.toInt()}');
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: const Text('Custom Duration'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Select recording duration (5 to 60 seconds):',
+                      style: TextStyle(fontSize: 13, color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  Text(
+                    '${tempVal.toInt()} sec',
+                    style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A73E8)),
+                  ),
+                  Slider(
+                    value: tempVal,
+                    min: 5.0,
+                    max: 60.0,
+                    divisions: 55,
+                    activeColor: const Color(0xFF1A73E8),
+                    label: '${tempVal.toInt()}s',
+                    onChanged: (val) {
+                      setDialogState(() {
+                        tempVal = val;
+                        controller.text = '${val.toInt()}';
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Exact Seconds (5 - 60)',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onChanged: (val) {
+                      final parsed = int.tryParse(val);
+                      if (parsed != null && parsed >= 5 && parsed <= 60) {
+                        setDialogState(() {
+                          tempVal = parsed.toDouble();
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A73E8),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    final parsed =
+                        int.tryParse(controller.text) ?? tempVal.toInt();
+                    final finalVal = parsed.clamp(5, 60);
+                    setState(() {
+                      _selectedDuration = finalVal;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text('Set Duration'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -341,7 +443,7 @@ class _CameraScreenState extends State<CameraScreen> {
                   ClipRect(
                     child: SizedBox.expand(
                       child: FittedBox(
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         child: SizedBox(
                           width: 100,
                           height: 100 * _controller!.value.aspectRatio,
@@ -452,30 +554,62 @@ class _CameraScreenState extends State<CameraScreen> {
                   const Text('Select Duration',
                       style: TextStyle(color: Colors.white70, fontSize: 12)),
                   const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [10, 15, 20].map((dur) {
-                      final isSelected = _selectedDuration == dur;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: ChoiceChip(
-                          label: Text('${dur}s',
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ...[10, 15, 20, 30, 60].map((dur) {
+                          final isSelected = _selectedDuration == dur;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: ChoiceChip(
+                              label: Text('${dur}s',
+                                  style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.black
+                                          : Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12)),
+                              selected: isSelected,
+                              selectedColor: Colors.white,
+                              backgroundColor: Colors.white12,
+                              showCheckmark: false,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() => _selectedDuration = dur);
+                                }
+                              },
+                            ),
+                          );
+                        }),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: ChoiceChip(
+                            label: Text(
+                              ![10, 15, 20, 30, 60].contains(_selectedDuration)
+                                  ? 'Custom (${_selectedDuration}s)'
+                                  : 'Custom',
                               style: TextStyle(
-                                  color: isSelected ? Colors.black : Colors.white,
+                                  color: ![10, 15, 20, 30, 60]
+                                          .contains(_selectedDuration)
+                                      ? Colors.black
+                                      : Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 12)),
-                          selected: isSelected,
-                          selectedColor: Colors.white,
-                          backgroundColor: Colors.white12,
-                          showCheckmark: false,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() => _selectedDuration = dur);
-                            }
-                          },
+                                  fontSize: 12),
+                            ),
+                            selected: ![10, 15, 20, 30, 60]
+                                .contains(_selectedDuration),
+                            selectedColor: Colors.white,
+                            backgroundColor: Colors.white12,
+                            showCheckmark: false,
+                            onSelected: (selected) {
+                              _showCustomDurationDialog();
+                            },
+                          ),
                         ),
-                      );
-                    }).toList(),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(
