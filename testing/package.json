@@ -1,0 +1,32 @@
+{
+  "name": "body-language-app-e2e-testing",
+  "version": "1.0.0",
+  "description": "End-to-End Automated Testing Suite for ConfidAI Web (Selenium) and Mobile (Appium) with Excel Analytics Reporting",
+  "main": "selenium_web/runner.js",
+  "scripts": {
+    "test:web": "node selenium_web/runner.js",
+    "test:mobile": "node appium_mobile/runner.js",
+    "test:all": "npm run test:web && npm run test:mobile"
+  },
+  "keywords": [
+    "selenium",
+    "appium",
+    "e2e-testing",
+    "excel-report",
+    "flutter-web",
+    "flutter-mobile",
+    "confidai"
+  ],
+  "author": "ConfidAI QA Team",
+  "license": "ISC",
+  "dependencies": {
+    "selenium-webdriver": "^4.20.0",
+    "webdriverio": "^8.36.0",
+    "exceljs": "^4.4.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "mocha": "^10.4.0",
+    "chai": "^4.4.1"
+  }
+}

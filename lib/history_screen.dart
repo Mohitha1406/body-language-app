@@ -8,7 +8,7 @@ class HistoryScreen extends StatefulWidget {
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
 
-  static Future<void> addSession(double score) async {
+  static Future<void> addSession(double score, {String duration = '15 sec'}) async {
     final prefs = await SharedPreferences.getInstance();
     final List<String> sessions =
         prefs.getStringList('sessions') ?? [];
@@ -19,7 +19,7 @@ class HistoryScreen extends StatefulWidget {
       'time':
           '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
       'score': score.toInt(),
-      'duration': '20 sec',
+      'duration': duration,
     });
     sessions.insert(0, session);
     await prefs.setStringList('sessions', sessions);

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'results_screen.dart';
 import 'history_screen.dart';
 
 // TODO: set this to your deployed backend URL, e.g. https://your-backend.onrender.com — a LAN IP will never work for a deployed web app.
-const String kBackendBaseUrl = 'https://your-backend.onrender.com';
+const String kBackendBaseUrl = 'https://confidai-ekznx62d.b4a.run';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -24,6 +25,7 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _isAnalyzing = false;
   int _countdown = 0;
   int _recordingSeconds = 0;
+  int _selectedDuration = 15;
   String? _errorMessage;
 
   @override
@@ -75,7 +77,7 @@ class _CameraScreenState extends State<CameraScreen> {
     );
 
     final response =
-        await request.send().timeout(const Duration(seconds: 15));
+        await request.send().timeout(const Duration(seconds: 120));
     final body = await response.stream.bytesToString();
 
     if (response.statusCode == 200) {
@@ -115,22 +117,36 @@ class _CameraScreenState extends State<CameraScreen> {
     if (_controller == null || !_controller!.value.isInitialized) return;
 
     for (int i = 3; i >= 1; i--) {
-      setState(() { _countdown = i; });
+      setState(() {
+        _countdown = i;
+      });
       await Future.delayed(const Duration(seconds: 1));
     }
-    setState(() { _countdown = 0; });
+    setState(() {
+      _countdown = 0;
+    });
 
     try {
       await _controller!.startVideoRecording();
-      setState(() { _isRecording = true; _recordingSeconds = 0; });
+      setState(() {
+        _isRecording = true;
+        _recordingSeconds = 0;
+      });
 
-      for (int i = 1; i <= 20; i++) {
+      for (int i = 1; i <= _selectedDuration; i++) {
         await Future.delayed(const Duration(seconds: 1));
-        if (mounted) setState(() { _recordingSeconds = i; });
+        if (mounted) {
+          setState(() {
+            _recordingSeconds = i;
+          });
+        }
       }
 
       final XFile videoFile = await _controller!.stopVideoRecording();
-      setState(() { _isRecording = false; _isAnalyzing = true; });
+      setState(() {
+        _isRecording = false;
+        _isAnalyzing = true;
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -145,7 +161,9 @@ class _CameraScreenState extends State<CameraScreen> {
       try {
         result = await _analyzeWithAI(videoFile);
       } catch (e) {
-        setState(() { _isAnalyzing = false; });
+        setState(() {
+          _isAnalyzing = false;
+        });
         if (mounted) {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
@@ -171,8 +189,10 @@ class _CameraScreenState extends State<CameraScreen> {
           ? List<String>.from(result['tips'])
           : _getFeedback(realScore);
 
-      await HistoryScreen.addSession(realScore);
-      setState(() { _isAnalyzing = false; });
+      await HistoryScreen.addSession(realScore, duration: '$_selectedDuration sec');
+      setState(() {
+        _isAnalyzing = false;
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -191,10 +211,98 @@ class _CameraScreenState extends State<CameraScreen> {
         );
       }
     } catch (e) {
-      setState(() { _isRecording = false; _isAnalyzing = false; });
+      setState(() {
+        _isRecording = false;
+        _isAnalyzing = false;
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickVideoFromGallery() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? videoFile =
+          await picker.pickVideo(source: ImageSource.gallery);
+      if (videoFile == null) return;
+
+      setState(() {
+        _isAnalyzing = true;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Analyzing with AI... please wait a few seconds'),
+            duration: Duration(seconds: 30),
+          ),
+        );
+      }
+
+      Map<String, dynamic> result;
+      try {
+        result = await _analyzeWithAI(videoFile);
+      } catch (e) {
+        setState(() {
+          _isAnalyzing = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Analysis failed: $e'),
+              duration: const Duration(seconds: 8),
+            ),
+          );
+        }
+        return;
+      }
+
+      final double realScore =
+          (result['confidence_score'] as num?)?.toDouble() ?? 0.0;
+      final double postureScore =
+          (result['posture_score'] as num?)?.toDouble() ?? 0.0;
+      final double headScore =
+          (result['head_stability_score'] as num?)?.toDouble() ?? 0.0;
+      final double gestureScore =
+          (result['gesture_score'] as num?)?.toDouble() ?? 0.0;
+
+      final List<String> aiTips = result['tips'] != null
+          ? List<String>.from(result['tips'])
+          : _getFeedback(realScore);
+
+      await HistoryScreen.addSession(realScore, duration: 'Gallery Video');
+      setState(() {
+        _isAnalyzing = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResultsScreen(
+              confidenceScore: realScore,
+              postureScore: postureScore,
+              headStabilityScore: headScore,
+              gestureScore: gestureScore,
+              feedback: aiTips,
+              videoPath: videoFile.path,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isAnalyzing = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error selecting video: $e')),
         );
       }
     }
@@ -224,16 +332,24 @@ class _CameraScreenState extends State<CameraScreen> {
               children: [
                 if (_isLoading)
                   const Center(
-                      child: CircularProgressIndicator(
-                          color: Colors.white))
+                      child: CircularProgressIndicator(color: Colors.white))
                 else if (_errorMessage != null)
                   Center(
                       child: Text(_errorMessage!,
-                          style:
-                              const TextStyle(color: Colors.white)))
-                else if (_isInitialized)
-                  SizedBox.expand(
-                      child: CameraPreview(_controller!)),
+                          style: const TextStyle(color: Colors.white)))
+                else if (_isInitialized && _controller != null)
+                  ClipRect(
+                    child: SizedBox.expand(
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: 100,
+                          height: 100 * _controller!.value.aspectRatio,
+                          child: CameraPreview(_controller!),
+                        ),
+                      ),
+                    ),
+                  ),
 
                 if (_isRecording)
                   CustomPaint(
@@ -248,8 +364,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircularProgressIndicator(
-                              color: Colors.greenAccent),
+                          CircularProgressIndicator(color: Colors.greenAccent),
                           SizedBox(height: 24),
                           Text(
                             'AI is analyzing your\nbody language...',
@@ -262,9 +377,8 @@ class _CameraScreenState extends State<CameraScreen> {
                           SizedBox(height: 8),
                           Text(
                             'Processing MediaPipe pose data...',
-                            style: TextStyle(
-                                color: Colors.white54,
-                                fontSize: 13),
+                            style:
+                                TextStyle(color: Colors.white54, fontSize: 13),
                           ),
                         ],
                       ),
@@ -297,8 +411,7 @@ class _CameraScreenState extends State<CameraScreen> {
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                           color: Colors.red,
-                          borderRadius:
-                              BorderRadius.circular(20)),
+                          borderRadius: BorderRadius.circular(20)),
                       child: const Row(children: [
                         Icon(Icons.fiber_manual_record,
                             color: Colors.white, size: 12),
@@ -307,8 +420,7 @@ class _CameraScreenState extends State<CameraScreen> {
                             style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
-                                fontWeight:
-                                    FontWeight.bold)),
+                                fontWeight: FontWeight.bold)),
                       ]),
                     ),
                   ),
@@ -319,11 +431,10 @@ class _CameraScreenState extends State<CameraScreen> {
                     left: 0,
                     right: 0,
                     child: LinearProgressIndicator(
-                      value: _recordingSeconds / 20,
+                      value: _recordingSeconds / _selectedDuration,
                       backgroundColor: Colors.white24,
                       valueColor:
-                          const AlwaysStoppedAnimation<Color>(
-                              Colors.red),
+                          const AlwaysStoppedAnimation<Color>(Colors.red),
                       minHeight: 4,
                     ),
                   ),
@@ -333,60 +444,109 @@ class _CameraScreenState extends State<CameraScreen> {
 
           Container(
             color: Colors.black,
-            padding: const EdgeInsets.all(30),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                if (!_isRecording &&
-                    _countdown == 0 &&
-                    !_isAnalyzing) ...[
-                  const Text(
-                      'Stand in front of camera\nand press record to start',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13)),
-                  const SizedBox(height: 24),
-                  GestureDetector(
-                    onTap: _isInitialized
-                        ? _startRecording
-                        : null,
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: _isInitialized
-                            ? Colors.red
-                            : Colors.grey,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: Colors.white, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                              color:
-                                  Colors.red.withOpacity(0.4),
-                              blurRadius: 20,
-                              spreadRadius: 4)
+                if (!_isRecording && _countdown == 0 && !_isAnalyzing) ...[
+                  const Text('Select Duration',
+                      style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [10, 15, 20].map((dur) {
+                      final isSelected = _selectedDuration == dur;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: ChoiceChip(
+                          label: Text('${dur}s',
+                              style: TextStyle(
+                                  color: isSelected ? Colors.black : Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12)),
+                          selected: isSelected,
+                          selectedColor: Colors.white,
+                          backgroundColor: Colors.white12,
+                          showCheckmark: false,
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() => _selectedDuration = dur);
+                            }
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Gallery Upload Button
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: _pickVideoFromGallery,
+                            child: Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: Colors.white12,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: Colors.white38, width: 1.5),
+                              ),
+                              child: const Icon(Icons.photo_library_rounded,
+                                  color: Colors.white, size: 26),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text('Gallery',
+                              style: TextStyle(
+                                  color: Colors.white54, fontSize: 11)),
                         ],
                       ),
-                      child: const Icon(
-                          Icons.fiber_manual_record,
-                          color: Colors.white,
-                          size: 32),
-                    ),
+                      const SizedBox(width: 36),
+                      // Live Record Button
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: _isInitialized ? _startRecording : null,
+                            child: Container(
+                              width: 68,
+                              height: 68,
+                              decoration: BoxDecoration(
+                                color: _isInitialized ? Colors.red : Colors.grey,
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.white, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Colors.red.withOpacity(0.4),
+                                      blurRadius: 16,
+                                      spreadRadius: 3)
+                                ],
+                              ),
+                              child: const Icon(Icons.fiber_manual_record,
+                                  color: Colors.white, size: 30),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text('Record ($_selectedDuration s)',
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 11)),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  const Text('Tap to Record (20 sec)',
-                      style: TextStyle(
-                          color: Colors.white54,
-                          fontSize: 12)),
                 ],
                 if (_isRecording) ...[
                   Text(
-                      'Recording body language...\n${20 - _recordingSeconds} seconds remaining',
+                      'Recording body language...\n${_selectedDuration - _recordingSeconds} seconds remaining',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14)),
+                      style: const TextStyle(color: Colors.white, fontSize: 14)),
                 ],
                 if (_countdown > 0) ...[
                   Text('Starting in $_countdown...',
@@ -417,30 +577,13 @@ class SkeletonPainter extends CustomPainter {
     final cx = size.width / 2;
     final cy = size.height / 2;
     canvas.drawCircle(Offset(cx, cy - 80), 20, dotPaint);
-    canvas.drawLine(
-        Offset(cx, cy - 60), Offset(cx, cy - 40), paint);
-    canvas.drawLine(
-        Offset(cx - 60, cy - 40),
-        Offset(cx + 60, cy - 40),
-        paint);
-    canvas.drawLine(
-        Offset(cx - 60, cy - 40),
-        Offset(cx - 90, cy + 20),
-        paint);
-    canvas.drawLine(
-        Offset(cx + 60, cy - 40),
-        Offset(cx + 90, cy + 20),
-        paint);
-    canvas.drawLine(
-        Offset(cx, cy - 40), Offset(cx, cy + 40), paint);
-    canvas.drawLine(
-        Offset(cx, cy + 40),
-        Offset(cx - 40, cy + 120),
-        paint);
-    canvas.drawLine(
-        Offset(cx, cy + 40),
-        Offset(cx + 40, cy + 120),
-        paint);
+    canvas.drawLine(Offset(cx, cy - 60), Offset(cx, cy - 40), paint);
+    canvas.drawLine(Offset(cx - 60, cy - 40), Offset(cx + 60, cy - 40), paint);
+    canvas.drawLine(Offset(cx - 60, cy - 40), Offset(cx - 90, cy + 20), paint);
+    canvas.drawLine(Offset(cx + 60, cy - 40), Offset(cx + 90, cy + 20), paint);
+    canvas.drawLine(Offset(cx, cy - 40), Offset(cx, cy + 40), paint);
+    canvas.drawLine(Offset(cx, cy + 40), Offset(cx - 40, cy + 120), paint);
+    canvas.drawLine(Offset(cx, cy + 40), Offset(cx + 40, cy + 120), paint);
     for (final offset in [
       Offset(cx - 60, cy - 40),
       Offset(cx + 60, cy - 40),
@@ -455,6 +598,5 @@ class SkeletonPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) =>
-      false;
-}
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

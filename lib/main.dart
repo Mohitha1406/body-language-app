@@ -6,6 +6,8 @@ import 'history_screen.dart';
 import 'camera_screen.dart';
 import 'login_screen.dart';
 import 'about_screen.dart';
+import 'tips_library_screen.dart';
+import 'achievements_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -100,7 +102,7 @@ class _MainScreenState extends State<MainScreen> {
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.self_improvement_rounded,
+                    Icon(Icons.psychology_rounded,
                         color: Colors.white, size: 36),
                     SizedBox(height: 8),
                     Text('ConfidAI',
@@ -143,6 +145,16 @@ class _MainScreenState extends State<MainScreen> {
                 Navigator.pop(context);
                 Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const AboutScreen()));
+              }),
+              _drawerItem(Icons.lightbulb_outline_rounded, 'Tips Library', () {
+                Navigator.pop(context);
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const TipsLibraryScreen()));
+              }),
+              _drawerItem(Icons.emoji_events_outlined, 'Achievements', () {
+                Navigator.pop(context);
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const AchievementsScreen()));
               }),
               const Spacer(),
               const Divider(),
