@@ -1,8 +1,8 @@
 require('dotenv').config();
 
 module.exports = {
-  baseUrl: process.env.WEB_BASE_URL || 'https://confidai-b469a.web.app',
-  backendUrl: process.env.BACKEND_URL || 'http://172.25.17.229:8000',
+  baseUrl: process.env.WEB_BASE_URL || 'http://localhost:8080',
+  backendUrl: process.env.BACKEND_URL || 'https://body-language-app.onrender.com',
   browser: process.env.BROWSER || 'chrome',
   headless: process.env.HEADLESS === 'true',
   implicitTimeoutMs: 10000,
@@ -11,6 +11,7 @@ module.exports = {
   testUser: {
     name: 'QA Test User',
     email: 'qatest@confidai.com',
-    password: 'Password123!'
+    password: 'Password123!',
+    phone: '1234567890'
   }
 };
