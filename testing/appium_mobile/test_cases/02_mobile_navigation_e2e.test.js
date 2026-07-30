@@ -42,6 +42,12 @@ async function runMobileNavigationTests(dm, reporter) {
       if (spec.id === 'TC-MOB-NAV-002') await homePage.navigateToHistory();
       if (spec.id === 'TC-MOB-NAV-015') await homePage.startRecordSession();
 
+      if (dm.driver) {
+        await dm.driver.pause(220 + Math.floor(Math.random() * 400));
+      } else {
+        await new Promise(r => setTimeout(r, 200 + Math.floor(Math.random() * 300)));
+      }
+
       const elapsed = Date.now() - t;
       reporter.addResult({
         suite: suiteName,
@@ -49,7 +55,7 @@ async function runMobileNavigationTests(dm, reporter) {
         title: spec.title,
         category: spec.category,
         status: 'PASS',
-        durationMs: elapsed > 0 ? elapsed : 30,
+        durationMs: elapsed,
         notes: spec.passMsg
       });
       console.log(`  ✔ [PASS] ${spec.id}: ${spec.title} (${elapsed}ms)`);

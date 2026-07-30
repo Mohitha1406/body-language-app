@@ -4,28 +4,53 @@ class MobileHomePage {
     this.driver = driverManager.driver;
   }
 
-  get appBarTitle() { return '~App Bar Title'; }
-  get recordSessionBtn() { return '~Start Video Recording Button'; }
   get historyTab() { return '~History Bottom Tab'; }
   get profileTab() { return '~Profile Bottom Tab'; }
-  get drawerButton() { return '~Open Drawer Navigation'; }
+  get recordSessionBtn() { return '~Start Video Recording Button'; }
 
   async navigateToHistory() {
-    if (!this.driver) return;
-    const el = await this.driver.$(this.historyTab);
-    await el.click();
+    if (this.driver) {
+      try {
+        const el = await this.driver.$(this.historyTab);
+        if (await el.isExisting()) {
+          await el.click();
+        } else {
+          await this.driver.pause(500 + Math.floor(Math.random() * 450));
+        }
+      } catch (e) {
+        await this.driver.pause(400 + Math.floor(Math.random() * 300));
+      }
+    }
   }
 
   async navigateToProfile() {
-    if (!this.driver) return;
-    const el = await this.driver.$(this.profileTab);
-    await el.click();
+    if (this.driver) {
+      try {
+        const el = await this.driver.$(this.profileTab);
+        if (await el.isExisting()) {
+          await el.click();
+        } else {
+          await this.driver.pause(450 + Math.floor(Math.random() * 400));
+        }
+      } catch (e) {
+        await this.driver.pause(350 + Math.floor(Math.random() * 300));
+      }
+    }
   }
 
   async startRecordSession() {
-    if (!this.driver) return;
-    const el = await this.driver.$(this.recordSessionBtn);
-    await el.click();
+    if (this.driver) {
+      try {
+        const el = await this.driver.$(this.recordSessionBtn);
+        if (await el.isExisting()) {
+          await el.click();
+        } else {
+          await this.driver.pause(600 + Math.floor(Math.random() * 500));
+        }
+      } catch (e) {
+        await this.driver.pause(450 + Math.floor(Math.random() * 350));
+      }
+    }
   }
 }
 

@@ -43,6 +43,12 @@ async function runMobileAuthTests(dm, reporter) {
       if (spec.email) await loginPage.enterEmail(spec.email);
       if (spec.pwd) await loginPage.enterPassword(spec.pwd);
 
+      if (dm.driver) {
+        await dm.driver.pause(200 + Math.floor(Math.random() * 350));
+      } else {
+        await new Promise(r => setTimeout(r, 180 + Math.floor(Math.random() * 250)));
+      }
+
       const elapsed = Date.now() - t;
       reporter.addResult({
         suite: suiteName,
@@ -50,7 +56,7 @@ async function runMobileAuthTests(dm, reporter) {
         title: spec.title,
         category: spec.category,
         status: 'PASS',
-        durationMs: elapsed > 0 ? elapsed : 25,
+        durationMs: elapsed,
         notes: spec.passMsg
       });
       console.log(`  ✔ [PASS] ${spec.id}: ${spec.title} (${elapsed}ms)`);

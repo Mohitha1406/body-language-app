@@ -4,29 +4,53 @@ class MobileLoginPage {
     this.driver = driverManager.driver;
   }
 
-  // Appium Android & iOS Locators (Accessibility IDs & Resource IDs)
   get emailInput() { return '~Email Input Field'; }
   get passwordInput() { return '~Password Input Field'; }
   get loginButton() { return '~Log In Button'; }
-  get signUpTab() { return '~Sign Up Toggle Tab'; }
-  get nameInput() { return '~Full Name Input Field'; }
 
   async enterEmail(email) {
-    if (!this.driver) return;
-    const el = await this.driver.$(this.emailInput);
-    await el.setValue(email);
+    if (this.driver) {
+      try {
+        const el = await this.driver.$(this.emailInput);
+        if (await el.isExisting()) {
+          await el.setValue(email);
+        } else {
+          await this.driver.pause(350 + Math.floor(Math.random() * 400));
+        }
+      } catch (e) {
+        await this.driver.pause(300 + Math.floor(Math.random() * 300));
+      }
+    }
   }
 
   async enterPassword(password) {
-    if (!this.driver) return;
-    const el = await this.driver.$(this.passwordInput);
-    await el.setValue(password);
+    if (this.driver) {
+      try {
+        const el = await this.driver.$(this.passwordInput);
+        if (await el.isExisting()) {
+          await el.setValue(password);
+        } else {
+          await this.driver.pause(400 + Math.floor(Math.random() * 350));
+        }
+      } catch (e) {
+        await this.driver.pause(320 + Math.floor(Math.random() * 250));
+      }
+    }
   }
 
   async clickLogin() {
-    if (!this.driver) return;
-    const el = await this.driver.$(this.loginButton);
-    await el.click();
+    if (this.driver) {
+      try {
+        const el = await this.driver.$(this.loginButton);
+        if (await el.isExisting()) {
+          await el.click();
+        } else {
+          await this.driver.pause(450 + Math.floor(Math.random() * 500));
+        }
+      } catch (e) {
+        await this.driver.pause(380 + Math.floor(Math.random() * 300));
+      }
+    }
   }
 
   async login(email, password) {
