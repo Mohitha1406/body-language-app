@@ -28,11 +28,18 @@ class ResultsScreen extends StatefulWidget {
 
 class _ResultsScreenState extends State<ResultsScreen> {
   int _userRating = 0;
+  final _noteController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadRating();
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadRating() async {
@@ -42,11 +49,25 @@ class _ResultsScreenState extends State<ResultsScreen> {
       final Map<String, dynamic> firstSession =
           jsonDecode(raw.first) as Map<String, dynamic>;
       final rating = firstSession['rating'] as int? ?? 0;
+      final note = firstSession['note'] as String? ?? '';
       if (mounted) {
         setState(() {
           _userRating = rating;
+          _noteController.text = note;
         });
       }
+    }
+  }
+
+  Future<void> _updateNote(String note) async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> raw = prefs.getStringList('sessions') ?? [];
+    if (raw.isNotEmpty) {
+      final Map<String, dynamic> firstSession =
+          jsonDecode(raw.first) as Map<String, dynamic>;
+      firstSession['note'] = note;
+      raw[0] = jsonEncode(firstSession);
+      await prefs.setStringList('sessions', raw);
     }
   }
 
@@ -362,6 +383,30 @@ class _ResultsScreenState extends State<ResultsScreen> {
                           fontWeight: FontWeight.w600),
                     ),
                   ],
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _noteController,
+                    style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                        fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Add a note about this session...',
+                      hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.grey[400],
+                          fontSize: 13),
+                      filled: true,
+                      fillColor: isDark
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                    ),
+                    onChanged: (text) => _updateNote(text),
+                  ),
                 ],
               ),
             ),

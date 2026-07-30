@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
+import 'dart:math';
 import 'results_screen.dart';
 import 'history_screen.dart';
 import 'theme_provider.dart';
@@ -29,10 +30,36 @@ class _CameraScreenState extends State<CameraScreen> {
   int _selectedDuration = 15;
   String? _errorMessage;
 
+  final List<String> _prompts = const [
+    "Pretend you're introducing yourself to a new team",
+    "Explain your favorite hobby in 30 seconds",
+    "Practice answering: tell me about yourself",
+    "Describe a challenge you overcame recently",
+    "Give a 30-second elevator pitch for a business idea",
+    "Explain a complex concept to a beginner",
+    "Practice presenting a project status update",
+    "Deliver an inspiring opening line for a speech",
+    "Practice handling a tough interview question",
+  ];
+  late String _currentPrompt;
+
   @override
   void initState() {
     super.initState();
+    _currentPrompt = _prompts[Random().nextInt(_prompts.length)];
     _initCamera();
+  }
+
+  void _shufflePrompt() {
+    final random = Random();
+    String nextPrompt;
+    do {
+      nextPrompt = _prompts[random.nextInt(_prompts.length)];
+    } while (nextPrompt == _currentPrompt && _prompts.length > 1);
+
+    setState(() {
+      _currentPrompt = nextPrompt;
+    });
   }
 
   Future<void> _initCamera() async {
@@ -455,9 +482,64 @@ class _CameraScreenState extends State<CameraScreen> {
                     ),
                   ),
 
-
-
-                if (_isAnalyzing)
+                if (!_isRecording &&
+                    _countdown == 0 &&
+                    !_isAnalyzing &&
+                    !_isLoading &&
+                    _errorMessage == null)
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    right: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.65),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.lightbulb_outline_rounded,
+                              color: Color(0xFFF59E0B), size: 22),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'Practice Prompt',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _currentPrompt,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.shuffle_rounded,
+                                color: Colors.white, size: 20),
+                            onPressed: _shufflePrompt,
+                            tooltip: 'Shuffle prompt',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   Container(
                     color: Colors.black87,
                     child: const Center(

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -640,6 +643,75 @@ class _ProgressReportScreenState
     );
   }
 
+  Future<void> _exportPdf() async {
+    if (_sessions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No session history to export')),
+      );
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final userName = prefs.getString('user_name') ?? 'User';
+
+    final totalSessions = _sessions.length;
+    final bestScore = _sessions
+        .map((s) => s['score'] as int)
+        .reduce((a, b) => a > b ? a : b);
+    final avgScore = (_sessions.map((s) => s['score'] as int).reduce((a, b) => a + b) /
+            totalSessions)
+        .round();
+
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('ConfidAI - Progress Summary',
+                  style: pw.TextStyle(
+                      fontSize: 22, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 8),
+              pw.Text('User: $userName',
+                  style: const pw.TextStyle(fontSize: 14)),
+              pw.SizedBox(height: 16),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Total Sessions: $totalSessions'),
+                  pw.Text('Best Score: $bestScore%'),
+                  pw.Text('Average Score: $avgScore%'),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+              pw.Text('Session Log',
+                  style: pw.TextStyle(
+                      fontSize: 16, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.TableHelper.fromTextArray(
+                headers: ['Date', 'Time', 'Score'],
+                data: _sessions.map((s) {
+                  return [
+                    s['date']?.toString() ?? '',
+                    s['time']?.toString() ?? '',
+                    '${s['score']}%',
+                  ];
+                }).toList(),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    final bytes = await pdf.save();
+    await Printing.sharePdf(
+        bytes: bytes, filename: 'ConfidAI_Progress_Report.pdf');
+  }
+
   Widget _buildStreakCalendar(BuildContext context) {
     final primaryColor = AppThemeProvider.of(context).primaryColor;
     final isDark = AppThemeProvider.of(context).isDarkMode;
@@ -856,22 +928,41 @@ class _ProgressReportScreenState
             ),
             const SizedBox(height: 12),
 
-            // CSV Export Button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _exportCsv,
-                icon: Icon(Icons.file_download_outlined, color: primaryColor),
-                label: Text('Export Session History (CSV)',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: primaryColor)),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: BorderSide(color: primaryColor),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+            // CSV & PDF Export Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _exportCsv,
+                    icon: Icon(Icons.file_download_outlined, color: primaryColor),
+                    label: Text('Export CSV',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: primaryColor)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: BorderSide(color: primaryColor),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _exportPdf,
+                    icon: const Icon(Icons.picture_as_pdf_rounded),
+                    label: const Text('Export PDF',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
 
@@ -1278,6 +1369,55 @@ class SessionDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
+            if (session['note'] != null &&
+                session['note'].toString().isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.edit_note_rounded,
+                            color: primaryColor, size: 22),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Session Note',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1A1A2E),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      session['note'].toString(),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1482,8 +1622,11 @@ class _HomeScreenState extends State<HomeScreen> {
   String _userInitials = 'U';
   String? _avatarPath;
   int _latestScore = -1;
+  int _previousScore = -1;
   int _bestScore = -1;
   int _totalSessions = 0;
+  bool _showReminderBanner = false;
+  bool _bannerDismissed = false;
 
   @override
   void initState() {
@@ -1505,16 +1648,68 @@ class _HomeScreenState extends State<HomeScreen> {
         prefs.getStringList('sessions') ?? [];
 
     int latestScore = -1;
+    int previousScore = -1;
     int bestScore = -1;
+    bool showReminder = false;
+    final now = DateTime.now();
 
     if (raw.isNotEmpty) {
       final sessions = raw
           .map((s) => jsonDecode(s) as Map<String, dynamic>)
           .toList();
       latestScore = sessions.first['score'] as int;
+      if (sessions.length > 1) {
+        previousScore = sessions[1]['score'] as int;
+      }
       bestScore = sessions
           .map((s) => s['score'] as int)
           .reduce((a, b) => a > b ? a : b);
+
+      final firstSession = sessions.first;
+      DateTime? latestDate;
+      if (firstSession['timestamp'] != null) {
+        latestDate = DateTime.fromMillisecondsSinceEpoch(
+            firstSession['timestamp'] as int);
+      } else if (firstSession['iso_date'] != null) {
+        latestDate = DateTime.tryParse(firstSession['iso_date'].toString());
+      } else if (firstSession['date'] != null) {
+        final parts = firstSession['date'].toString().split(' ');
+        if (parts.length >= 3) {
+          final day = int.tryParse(parts[0]);
+          final monthStr = parts[1].toLowerCase();
+          final year = int.tryParse(parts[2]);
+          const months = [
+            'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+            'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
+          ];
+          final mIdx = months.indexWhere((m) => monthStr.startsWith(m));
+          if (day != null && year != null && mIdx != -1) {
+            latestDate = DateTime(year, mIdx + 1, day);
+          }
+        }
+      }
+
+      if (latestDate != null && now.difference(latestDate).inDays >= 3) {
+        showReminder = true;
+      }
+    } else {
+      final user = Supabase.instance.client.auth.currentUser;
+      DateTime? createdDate;
+      if (user?.createdAt != null) {
+        createdDate = DateTime.tryParse(user!.createdAt);
+      }
+      if (createdDate == null) {
+        final savedCreated = prefs.getString('account_created_at');
+        if (savedCreated != null) {
+          createdDate = DateTime.tryParse(savedCreated);
+        } else {
+          prefs.setString('account_created_at', now.toIso8601String());
+          createdDate = now;
+        }
+      }
+      if (createdDate != null && now.difference(createdDate).inDays >= 2) {
+        showReminder = true;
+      }
     }
 
     if (mounted) {
@@ -1528,8 +1723,10 @@ class _HomeScreenState extends State<HomeScreen> {
             .take(2)
             .join();
         _latestScore = latestScore;
+        _previousScore = previousScore;
         _bestScore = bestScore;
         _totalSessions = raw.length;
+        _showReminderBanner = showReminder;
       });
     }
   }
@@ -1669,6 +1866,88 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
+                if (_showReminderBanner && !_bannerDismissed) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: const Color(0xFF3B82F6).withOpacity(0.4)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B82F6).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.fitness_center_rounded,
+                              color: Color(0xFF3B82F6), size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "It's been a while — practice today?",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const CameraScreen()),
+                                  );
+                                  _loadData();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF3B82F6),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 8),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Start Practice',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () =>
+                              setState(() => _bannerDismissed = true),
+                          color: isDark ? Colors.white54 : Colors.grey[600],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -1692,14 +1971,54 @@ class _HomeScreenState extends State<HomeScreen> {
                       const Text('Your Latest Score',
                           style: TextStyle(color: Colors.white70, fontSize: 13)),
                       const SizedBox(height: 8),
-                      Text(
-                        _latestScore == -1 ? '-- %' : '$_latestScore%',
-                        style: TextStyle(
-                            color: _latestScore == -1
-                                ? Colors.white
-                                : _getScoreColor(),
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Text(
+                            _latestScore == -1 ? '-- %' : '$_latestScore%',
+                            style: TextStyle(
+                                color: _latestScore == -1
+                                    ? Colors.white
+                                    : _getScoreColor(),
+                                fontSize: 48,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          if (_latestScore != -1) ...[
+                            const SizedBox(width: 12),
+                            if (_previousScore == -1 ||
+                                _latestScore == _previousScore)
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.remove,
+                                    color: Colors.white70, size: 20),
+                              )
+                            else if (_latestScore > _previousScore)
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color(0xFF10B981).withOpacity(0.25),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.arrow_upward_rounded,
+                                    color: Color(0xFF10B981), size: 24),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color(0xFFEF4444).withOpacity(0.25),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.arrow_downward_rounded,
+                                    color: Color(0xFFEF4444), size: 24),
+                              ),
+                          ],
+                        ],
                       ),
                       Text(_getScoreMessage(),
                           style: const TextStyle(

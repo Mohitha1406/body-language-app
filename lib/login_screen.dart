@@ -121,8 +121,11 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on AuthException catch (e) {
       setState(() => _error = e.message);
+    } on PostgrestException catch (e) {
+      setState(() => _error = e.message);
     } catch (e) {
-      setState(() => _error = 'Something went wrong. Try again.');
+      final msg = e.toString().replaceAll('Exception: ', '');
+      setState(() => _error = msg.isNotEmpty ? msg : 'An error occurred. Please try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

@@ -265,6 +265,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         style: TextStyle(
                                             fontSize: 12,
                                             color: Colors.grey[500])),
+                                    if (session['note'] != null &&
+                                        session['note'].toString().isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        session['note'].toString(),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontStyle: FontStyle.italic,
+                                          color: isDark
+                                              ? Colors.white60
+                                              : Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
                                     if (rating > 0) ...[
                                       const SizedBox(height: 4),
                                       Row(
