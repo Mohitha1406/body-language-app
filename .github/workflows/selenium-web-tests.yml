@@ -14,12 +14,26 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Google Chrome
+      - name: Run Flutter Unit Tests
+        run: |
+          flutter pub get
+          flutter test test/unit/
+
+      - name: Verify Web Release Build
+        run: |
+          flutter build web --release
+
+      - name: Install Google Chrome Browser
         run: |
           sudo apt-get update
           sudo apt-get install -y wget gnupg
@@ -28,17 +42,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
 
-      - name: Run Selenium Web E2E Tests
+      - name: Run Master E2E Automation Suite & Selenium Web Tests
         env:
           HEADLESS: "true"
         run: |
           cd testing
           npm install
-          npm run test:web
+          node run_all_tests.js
 
-      - name: Upload Excel Test Report Artifact
+      - name: Upload Master Excel Test Report Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: selenium-web-test-report
-          path: testing/reports/Selenium_Web_E2E_Test_Report.xlsx
+          name: master-e2e-test-reports
+          path: |
+            testing/reports/Master_E2E_Analysis_Report.xlsx
+            testing/reports/Selenium_Web_E2E_Test_Report.xlsx
+            testing/reports/Appium_Mobile_E2E_Test_Report.xlsx

@@ -6,13 +6,15 @@ class AppiumExcelReporter {
   constructor(reportFilePath) {
     this.reportFilePath = reportFilePath;
     this.testResults = [];
+    this.startTime = new Date();
   }
 
-  addResult({ suite, testId, title, status, durationMs, error = '', notes = '' }) {
+  addResult({ suite, testId, title, category = 'Functional', status, durationMs, error = '', notes = '' }) {
     this.testResults.push({
       suite,
       testId,
       title,
+      category,
       status,
       durationMs,
       timestamp: new Date().toISOString(),
@@ -23,66 +25,84 @@ class AppiumExcelReporter {
 
   async generateReport() {
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'ConfidAI QA Appium Mobile Automation';
+    workbook.creator = 'ConfidAI Appium Mobile QA Framework';
     workbook.created = new Date();
 
     const totalTests = this.testResults.length;
     const passedTests = this.testResults.filter(r => r.status === 'PASS').length;
     const failedTests = this.testResults.filter(r => r.status === 'FAIL').length;
     const passRate = totalTests > 0 ? ((passedTests / totalTests) * 100).toFixed(2) + '%' : '0%';
+    const totalDuration = this.testResults.reduce((acc, r) => acc + r.durationMs, 0);
 
-    // Sheet 1: Summary
-    const summarySheet = workbook.addWorksheet('Mobile Test Summary');
+    const summarySheet = workbook.addWorksheet('Mobile Execution Summary');
 
     summarySheet.mergeCells('A1:E2');
     const titleCell = summarySheet.getCell('A1');
-    titleCell.value = 'ConfidAI Mobile Appium E2E Test Analysis Report';
+    titleCell.value = 'ConfidAI Appium Mobile E2E Test Analysis Report';
     titleCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFF' } };
-    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1A73E8' } };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '27AE60' } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
     summarySheet.addRow([]);
+
+    const kpiRows = [
+      ['Execution Date', new Date().toLocaleString()],
+      ['Total Test Cases Executed', totalTests],
+      ['Total Passed', passedTests],
+      ['Total Failed', failedTests],
+      ['Pass Rate Percentage', passRate],
+      ['Total Execution Time', `${(totalDuration / 1000).toFixed(2)} seconds`]
+    ];
+
     summarySheet.addRow(['Metric', 'Value']);
     const metricHeader = summarySheet.getRow(4);
     metricHeader.font = { bold: true, color: { argb: 'FFFFFF' } };
-    metricHeader.eachCell(c => c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2C3E50' } });
+    metricHeader.eachCell(cell => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2C3E50' } };
+    });
 
-    [
-      ['Platform', 'Android / iOS Appium Automation'],
-      ['Execution Timestamp', new Date().toLocaleString()],
-      ['Total Mobile Test Cases', totalTests],
-      ['Passed', passedTests],
-      ['Failed', failedTests],
-      ['Pass Rate', passRate]
-    ].forEach(row => summarySheet.addRow(row));
+    kpiRows.forEach(r => {
+      const row = summarySheet.addRow(r);
+      if (r[0] === 'Total Passed') {
+        row.getCell(2).font = { bold: true, color: { argb: '27AE60' } };
+      } else if (r[0] === 'Total Failed' && r[1] > 0) {
+        row.getCell(2).font = { bold: true, color: { argb: 'C0392B' } };
+      }
+    });
 
-    summarySheet.getColumn(1).width = 28;
+    summarySheet.getColumn(1).width = 30;
     summarySheet.getColumn(2).width = 35;
 
-    // Sheet 2: Mobile Details
-    const detailSheet = workbook.addWorksheet('Mobile Test Cases');
+    const detailSheet = workbook.addWorksheet('Detailed Mobile Cases');
+
     detailSheet.columns = [
-      { header: 'Test Suite', key: 'suite', width: 25 },
-      { header: 'Test ID', key: 'testId', width: 15 },
-      { header: 'Mobile Test Description', key: 'title', width: 45 },
+      { header: 'Suite Name', key: 'suite', width: 30 },
+      { header: 'Test ID', key: 'testId', width: 20 },
+      { header: 'Test Description', key: 'title', width: 50 },
+      { header: 'Category', key: 'category', width: 15 },
       { header: 'Status', key: 'status', width: 12 },
       { header: 'Duration (ms)', key: 'durationMs', width: 15 },
       { header: 'Timestamp', key: 'timestamp', width: 25 },
-      { header: 'Error Trace', key: 'error', width: 50 },
-      { header: 'Notes', key: 'notes', width: 35 }
+      { header: 'Error / Exception Log', key: 'error', width: 50 },
+      { header: 'Notes / Context', key: 'notes', width: 35 }
     ];
 
     const headerRow = detailSheet.getRow(1);
-    headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
+    headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11 };
+    headerRow.height = 26;
     headerRow.eachCell(cell => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1A73E8' } };
-      cell.alignment = { horizontal: 'center' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '27AE60' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
 
     this.testResults.forEach(res => {
       const row = detailSheet.addRow(res);
+      row.height = 20;
+
       const statusCell = row.getCell('status');
-      statusCell.alignment = { horizontal: 'center' };
+      statusCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      statusCell.font = { bold: true };
+
       if (res.status === 'PASS') {
         statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D4EDDA' } };
         statusCell.font = { color: { argb: '155724' }, bold: true };
@@ -98,7 +118,7 @@ class AppiumExcelReporter {
     }
 
     await workbook.xlsx.writeFile(this.reportFilePath);
-    console.log(`\n[AppiumExcelReporter] Mobile E2E Excel Report generated at:\n => ${path.resolve(this.reportFilePath)}\n`);
+    console.log(`\n[AppiumExcelReporter] Mobile E2E Excel Analysis Report generated at:\n => ${path.resolve(this.reportFilePath)}\n`);
   }
 }
 

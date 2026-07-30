@@ -9,11 +9,12 @@ class ExcelReporter {
     this.startTime = new Date();
   }
 
-  addResult({ suite, testId, title, status, durationMs, error = '', notes = '' }) {
+  addResult({ suite, testId, title, category = 'Functional', status, durationMs, error = '', notes = '' }) {
     this.testResults.push({
       suite,
       testId,
       title,
+      category,
       status,
       durationMs,
       timestamp: new Date().toISOString(),
@@ -86,6 +87,7 @@ class ExcelReporter {
       { header: 'Suite Name', key: 'suite', width: 25 },
       { header: 'Test ID', key: 'testId', width: 15 },
       { header: 'Test Description', key: 'title', width: 45 },
+      { header: 'Category', key: 'category', width: 15 },
       { header: 'Status', key: 'status', width: 12 },
       { header: 'Duration (ms)', key: 'durationMs', width: 15 },
       { header: 'Timestamp', key: 'timestamp', width: 25 },
