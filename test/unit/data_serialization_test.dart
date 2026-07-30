@@ -1,9 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confidai/theme_provider.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('Category: Data Serialization & Theme State Tests (40 Unique Unit Tests)', () {
     // ----------------------------------------------------
     // SESSION HISTORY JSON SERIALIZATION TESTS (20 tests)
@@ -162,59 +169,59 @@ void main() {
       expect(provider.isDarkMode, isFalse);
     });
 
-    test('DATA-023: Switch accent color to orange', () {
+    test('DATA-023: Switch accent color to orange', () async {
       final provider = ThemeProvider();
-      provider.setAccentColor('orange');
+      await provider.setAccentColor('orange');
       expect(provider.accentName, equals('orange'));
     });
 
-    test('DATA-024: Switch accent color to green', () {
+    test('DATA-024: Switch accent color to green', () async {
       final provider = ThemeProvider();
-      provider.setAccentColor('green');
+      await provider.setAccentColor('green');
       expect(provider.accentName, equals('green'));
     });
 
-    test('DATA-025: Switch accent color to blue', () {
+    test('DATA-025: Switch accent color to blue', () async {
       final provider = ThemeProvider();
-      provider.setAccentColor('orange');
-      provider.setAccentColor('blue');
+      await provider.setAccentColor('orange');
+      await provider.setAccentColor('blue');
       expect(provider.accentName, equals('blue'));
     });
 
-    test('DATA-026: Primary color for blue accent (0xFF1A73E8)', () {
+    test('DATA-026: Primary color for blue accent (0xFF1A73E8)', () async {
       final provider = ThemeProvider();
-      provider.setAccentColor('blue');
+      await provider.setAccentColor('blue');
       expect(provider.primaryColor.value, equals(0xFF1A73E8));
     });
 
-    test('DATA-027: Primary color for orange accent (0xFFC84B31)', () {
+    test('DATA-027: Primary color for orange accent (0xFFC84B31)', () async {
       final provider = ThemeProvider();
-      provider.setAccentColor('orange');
+      await provider.setAccentColor('orange');
       expect(provider.primaryColor.value, equals(0xFFC84B31));
     });
 
-    test('DATA-028: Primary color for green accent (0xFF1B5E20)', () {
+    test('DATA-028: Primary color for green accent (0xFF1B5E20)', () async {
       final provider = ThemeProvider();
-      provider.setAccentColor('green');
+      await provider.setAccentColor('green');
       expect(provider.primaryColor.value, equals(0xFF1B5E20));
     });
 
-    test('DATA-029: Toggle dark mode from false to true', () {
+    test('DATA-029: Toggle dark mode from false to true', () async {
       final provider = ThemeProvider();
-      provider.setDarkMode(true);
+      await provider.setDarkMode(true);
       expect(provider.isDarkMode, isTrue);
     });
 
-    test('DATA-030: Toggle dark mode from true to false', () {
+    test('DATA-030: Toggle dark mode from true to false', () async {
       final provider = ThemeProvider();
-      provider.setDarkMode(true);
-      provider.setDarkMode(false);
+      await provider.setDarkMode(true);
+      await provider.setDarkMode(false);
       expect(provider.isDarkMode, isFalse);
     });
 
-    test('DATA-031: Invalid accent name falls back to blue primary color', () {
+    test('DATA-031: Invalid accent name falls back to blue primary color', () async {
       final provider = ThemeProvider();
-      provider.setAccentColor('unknown_color');
+      await provider.setAccentColor('unknown_color');
       expect(provider.primaryColor.value, equals(0xFF1A73E8));
     });
 
@@ -223,9 +230,9 @@ void main() {
       expect(provider.themeData.brightness, equals(Brightness.light));
     });
 
-    test('DATA-033: ThemeData brightness matches dark mode true', () {
+    test('DATA-033: ThemeData brightness matches dark mode true', () async {
       final provider = ThemeProvider();
-      provider.setDarkMode(true);
+      await provider.setDarkMode(true);
       expect(provider.themeData.brightness, equals(Brightness.dark));
     });
 
@@ -234,50 +241,50 @@ void main() {
       expect(provider.themeData.scaffoldBackgroundColor.value, equals(0xFFF5F7FF));
     });
 
-    test('DATA-035: ThemeData scaffold background in dark mode', () {
+    test('DATA-035: ThemeData scaffold background in dark mode', () async {
       final provider = ThemeProvider();
-      provider.setDarkMode(true);
+      await provider.setDarkMode(true);
       expect(provider.themeData.scaffoldBackgroundColor.value, equals(0xFF121212));
     });
 
-    test('DATA-036: ThemeProvider listener notification count on accent change', () {
+    test('DATA-036: ThemeProvider listener notification count on accent change', () async {
       final provider = ThemeProvider();
       int callCount = 0;
       provider.addListener(() => callCount++);
-      provider.setAccentColor('orange');
+      await provider.setAccentColor('orange');
       expect(callCount, equals(1));
     });
 
-    test('DATA-037: ThemeProvider listener notification count on dark mode toggle', () {
+    test('DATA-037: ThemeProvider listener notification count on dark mode toggle', () async {
       final provider = ThemeProvider();
       int callCount = 0;
       provider.addListener(() => callCount++);
-      provider.setDarkMode(true);
+      await provider.setDarkMode(true);
       expect(callCount, equals(1));
     });
 
-    test('DATA-038: Ignore redundant dark mode toggle call', () {
+    test('DATA-038: Ignore redundant dark mode toggle call', () async {
       final provider = ThemeProvider();
       int callCount = 0;
       provider.addListener(() => callCount++);
-      provider.setDarkMode(false);
+      await provider.setDarkMode(false);
       expect(callCount, equals(0));
     });
 
-    test('DATA-039: Ignore redundant accent color set call', () {
+    test('DATA-039: Ignore redundant accent color set call', () async {
       final provider = ThemeProvider();
       int callCount = 0;
       provider.addListener(() => callCount++);
-      provider.setAccentColor('blue');
+      await provider.setAccentColor('blue');
       expect(callCount, equals(0));
     });
 
-    test('DATA-040: ThemeProvider rapid color switching integrity', () {
+    test('DATA-040: ThemeProvider rapid color switching integrity', () async {
       final provider = ThemeProvider();
-      provider.setAccentColor('orange');
-      provider.setAccentColor('green');
-      provider.setAccentColor('blue');
-      provider.setAccentColor('orange');
+      await provider.setAccentColor('orange');
+      await provider.setAccentColor('green');
+      await provider.setAccentColor('blue');
+      await provider.setAccentColor('orange');
       expect(provider.accentName, equals('orange'));
     });
   });

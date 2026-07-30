@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:confidai/validators.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('Category: Streak & Date Logic Tests (40 Unique Unit Tests)', () {
     // ----------------------------------------------------
     // DATE KEY FORMATTING TESTS (15 tests)

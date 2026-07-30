@@ -46,6 +46,7 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   Future<void> setDarkMode(bool value) async {
+    if (_isDarkMode == value) return;
     _isDarkMode = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_dark_mode', value);
@@ -53,6 +54,7 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   Future<void> setAccentColor(String name) async {
+    if (_accentName == name) return;
     _accentName = name;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('accent_color', name);
