@@ -1,4 +1,8 @@
 require('dotenv').config();
+const path = require('path');
+
+const apkPath = process.env.ANDROID_APK_PATH || path.resolve(__dirname, '../../build/app/outputs/flutter-apk/app-release.apk');
+const iosAppPath = process.env.IOS_APP_PATH || path.resolve(__dirname, '../../build/ios/iphonesimulator/Runner.app');
 
 module.exports = {
   appiumHost: process.env.APPIUM_HOST || '127.0.0.1',
@@ -11,7 +15,7 @@ module.exports = {
     platformName: 'Android',
     'appium:automationName': 'UiAutomator2',
     'appium:deviceName': process.env.ANDROID_DEVICE_NAME || 'Android_Emulator',
-    'appium:app': process.env.ANDROID_APK_PATH || './build/app/outputs/flutter-apk/app-release.apk',
+    'appium:app': apkPath,
     'appium:appPackage': 'com.example.body_language_app',
     'appium:appActivity': 'com.example.body_language_app.MainActivity',
     'appium:autoGrantPermissions': true,
@@ -24,7 +28,7 @@ module.exports = {
     'appium:automationName': 'XCUITest',
     'appium:deviceName': process.env.IOS_DEVICE_NAME || 'iPhone 15',
     'appium:platformVersion': '17.0',
-    'appium:app': process.env.IOS_APP_PATH || './build/ios/iphonesimulator/Runner.app',
+    'appium:app': iosAppPath,
     'appium:autoAcceptAlerts': true,
     'appium:newCommandTimeout': 180
   },
