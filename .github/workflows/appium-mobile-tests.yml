@@ -55,15 +55,15 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
-          target: google_apis
+          target: default
           arch: x86_64
           force-avd-creation: false
-          emulator-boot-timeout: 900
-          emulator-options: -no-snapshot-load -no-window -no-audio -no-boot-anim -camera-back fake
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-audio -no-boot-anim -camera-back fake
           disable-animations: true
           script: |
             appium --log appium.log &
-            sleep 8
+            sleep 6
             cd testing
             npm run test:mobile
 
