@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'main.dart';
+import 'otp_verification_screen.dart';
+import 'reset_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _phoneController = TextEditingController();
   bool _isLogin = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -21,10 +24,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final supabase = Supabase.instance.client;
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final name = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
       setState(() => _error = 'Please fill in all fields');
@@ -65,6 +78,9 @@ class _LoginScreenState extends State<LoginScreen> {
           await prefs.setBool('is_logged_in', true);
           await prefs.setString('user_name', profile['name'] ?? email);
           await prefs.setString('user_email', email);
+          if (profile['phone'] != null) {
+            await prefs.setString('user_phone', profile['phone'].toString());
+          }
 
           if (mounted) {
             Navigator.pushReplacement(
@@ -86,17 +102,19 @@ class _LoginScreenState extends State<LoginScreen> {
             'id': response.user!.id,
             'name': name,
             'email': email,
+            'phone': phone,
           });
 
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('is_logged_in', true);
           await prefs.setString('user_name', name);
           await prefs.setString('user_email', email);
+          await prefs.setString('user_phone', phone);
 
           if (mounted) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const MainScreen()),
+              MaterialPageRoute(
+                  builder: (_) => OtpVerificationScreen(email: email)),
             );
           }
         }
@@ -108,6 +126,117 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showForgotPasswordDialog() {
+    final dialogEmailController =
+        TextEditingController(text: _emailController.text);
+    bool isSending = false;
+    String? dialogError;
+    String? dialogSuccess;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF0F172A),
+              title: const Text('Reset Password',
+                  style: TextStyle(color: Colors.white)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Enter your email address and we will send you a password reset link.',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: dialogEmailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration(
+                        'Enter your email', Icons.email_outlined),
+                  ),
+                  if (dialogError != null) ...[
+                    const SizedBox(height: 12),
+                    Text(dialogError!,
+                        style:
+                            const TextStyle(color: Colors.red, fontSize: 12)),
+                  ],
+                  if (dialogSuccess != null) ...[
+                    const SizedBox(height: 12),
+                    Text(dialogSuccess!,
+                        style: const TextStyle(
+                            color: Colors.greenAccent, fontSize: 12)),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  onPressed: isSending
+                      ? null
+                      : () async {
+                          final email = dialogEmailController.text.trim();
+                          if (email.isEmpty || !email.contains('@')) {
+                            setDialogState(() => dialogError =
+                                'Please enter a valid email address');
+                            return;
+                          }
+                          setDialogState(() {
+                            isSending = true;
+                            dialogError = null;
+                            dialogSuccess = null;
+                          });
+                          try {
+                            await supabase.auth.resetPasswordForEmail(
+                              email,
+                              redirectTo:
+                                  'https://confidai-b469a.web.app/reset-password',
+                            );
+                            setDialogState(() {
+                              isSending = false;
+                              dialogSuccess =
+                                  'Check your email for a password reset link';
+                            });
+                          } on AuthException catch (e) {
+                            setDialogState(() {
+                              isSending = false;
+                              dialogError = e.message;
+                            });
+                          } catch (e) {
+                            setDialogState(() {
+                              isSending = false;
+                              dialogError =
+                                  'Failed to send reset link. Try again.';
+                            });
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A73E8),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: isSending
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Text('Send Link'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -213,7 +342,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 28),
 
-              // Name field (only for signup)
+              // Name & Phone fields (only for signup)
               if (!_isLogin) ...[
                 const Text('Full Name',
                     style: TextStyle(
@@ -226,6 +355,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: const TextStyle(color: Colors.white),
                   decoration: _inputDecoration(
                       'Enter your full name', Icons.person_outline),
+                ),
+                const SizedBox(height: 16),
+                const Text('Phone Number',
+                    style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration(
+                      'Enter your phone number', Icons.phone_outlined),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -291,6 +434,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+              if (_isLogin) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: _showForgotPasswordDialog,
+                    child: const Text(
+                      'Forgot Password?',
+                      style: TextStyle(
+                        color: Color(0xFF1A73E8),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
 
               // Error message
@@ -384,4 +544,4 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-}
+}

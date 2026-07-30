@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'theme_provider.dart';
@@ -15,6 +16,10 @@ import 'login_screen.dart';
 import 'about_screen.dart';
 import 'tips_library_screen.dart';
 import 'achievements_screen.dart';
+import 'otp_verification_screen.dart';
+import 'reset_password_screen.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +47,7 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final bool isLoggedIn;
   final bool hasSeenOnboarding;
   const MyApp({
@@ -52,19 +57,45 @@ class MyApp extends StatelessWidget {
   });
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final StreamSubscription<AuthState> _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final themeProvider = AppThemeProvider.of(context);
     return ListenableBuilder(
       listenable: themeProvider,
       builder: (context, _) {
         Widget initialHome;
-        if (!hasSeenOnboarding) {
-          initialHome = OnboardingScreen(isLoggedIn: isLoggedIn);
+        if (!widget.hasSeenOnboarding) {
+          initialHome = OnboardingScreen(isLoggedIn: widget.isLoggedIn);
         } else {
-          initialHome = isLoggedIn ? const MainScreen() : const LoginScreen();
+          initialHome = widget.isLoggedIn ? const MainScreen() : const LoginScreen();
         }
 
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'ConfidAI',
           debugShowCheckedModeBanner: false,
           theme: themeProvider.themeData,
@@ -1781,6 +1812,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String _userName = 'User';
   String _userEmail = '';
+  String? _userPhone;
   String _userInitials = 'U';
   String? _avatarPath;
   int _totalSessions = 0;
@@ -1796,6 +1828,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? 'User';
     final email = prefs.getString('user_email') ?? '';
+    final phone = prefs.getString('user_phone');
     final avatar = prefs.getString('user_avatar_path');
     final List<String> raw = prefs.getStringList('sessions') ?? [];
 
@@ -1811,6 +1844,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _userName = name;
       _userEmail = email;
+      _userPhone = phone;
       _avatarPath = avatar;
       _userInitials = name
           .trim()
@@ -1940,6 +1974,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Text(_userEmail,
                   style:
                       TextStyle(fontSize: 13, color: Colors.grey[600])),
+              if (_userPhone != null && _userPhone!.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(_userPhone!,
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+              ],
               const SizedBox(height: 32),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
