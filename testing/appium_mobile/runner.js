@@ -31,6 +31,15 @@ async function executeAppiumMobileE2E() {
     console.log(`\n[AppiumExcelReporter] Compiling Mobile Excel Analysis Report...`);
     await reporter.generateReport();
     console.log(`🎉 Appium Mobile E2E Test Execution Completed Successfully!\n`);
+
+    const hasFailures = reporter.results.some(r => r.status === 'FAIL');
+    if (hasFailures) {
+      console.error(`✖ Some Appium mobile test cases failed.`);
+      process.exit(1);
+    } else {
+      console.log(`✔ All Appium mobile test cases passed!`);
+      process.exit(0);
+    }
   }
 }
 
