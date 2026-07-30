@@ -1,0 +1,44 @@
+name: Selenium Web E2E Tests
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  selenium-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Google Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
+      - name: Run Selenium Web E2E Tests
+        env:
+          HEADLESS: "true"
+        run: |
+          cd testing
+          npm install
+          npm run test:web
+
+      - name: Upload Excel Test Report Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-web-test-report
+          path: testing/reports/Selenium_Web_E2E_Test_Report.xlsx
