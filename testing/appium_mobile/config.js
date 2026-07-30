@@ -3,7 +3,7 @@ require('dotenv').config();
 module.exports = {
   appiumHost: process.env.APPIUM_HOST || '127.0.0.1',
   appiumPort: parseInt(process.env.APPIUM_PORT || '4723', 10),
-  appiumPath: '/wd/hub',
+  appiumPath: process.env.APPIUM_PATH || '/',
   reportPath: './reports/Appium_Mobile_E2E_Test_Report.xlsx',
 
   // Android Capabilities for Flutter Appium Automation

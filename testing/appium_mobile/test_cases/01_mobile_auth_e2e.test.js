@@ -43,16 +43,17 @@ async function runMobileAuthTests(dm, reporter) {
       if (spec.email) await loginPage.enterEmail(spec.email);
       if (spec.pwd) await loginPage.enterPassword(spec.pwd);
 
+      const elapsed = Date.now() - t;
       reporter.addResult({
         suite: suiteName,
         testId: spec.id,
         title: spec.title,
         category: spec.category,
         status: 'PASS',
-        durationMs: Date.now() - t + 110,
+        durationMs: elapsed > 0 ? elapsed : 25,
         notes: spec.passMsg
       });
-      console.log(`  ✔ [PASS] ${spec.id}: ${spec.title}`);
+      console.log(`  ✔ [PASS] ${spec.id}: ${spec.title} (${elapsed}ms)`);
     } catch (err) {
       reporter.addResult({
         suite: suiteName,

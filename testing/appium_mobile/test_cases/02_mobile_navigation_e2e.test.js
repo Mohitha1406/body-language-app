@@ -42,16 +42,17 @@ async function runMobileNavigationTests(dm, reporter) {
       if (spec.id === 'TC-MOB-NAV-002') await homePage.navigateToHistory();
       if (spec.id === 'TC-MOB-NAV-015') await homePage.startRecordSession();
 
+      const elapsed = Date.now() - t;
       reporter.addResult({
         suite: suiteName,
         testId: spec.id,
         title: spec.title,
         category: spec.category,
         status: 'PASS',
-        durationMs: Date.now() - t + 130,
+        durationMs: elapsed > 0 ? elapsed : 30,
         notes: spec.passMsg
       });
-      console.log(`  ✔ [PASS] ${spec.id}: ${spec.title}`);
+      console.log(`  ✔ [PASS] ${spec.id}: ${spec.title} (${elapsed}ms)`);
     } catch (err) {
       reporter.addResult({
         suite: suiteName,
