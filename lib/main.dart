@@ -21,6 +21,7 @@ import 'login_screen.dart';
 import 'about_screen.dart';
 import 'tips_library_screen.dart';
 import 'achievements_screen.dart';
+import 'package:video_player/video_player.dart';
 import 'otp_verification_screen.dart';
 import 'reset_password_screen.dart';
 
@@ -491,6 +492,16 @@ class _ProgressReportScreenState
     final gesture1 = (s1['gesture_score'] as num?)?.toInt() ?? score1;
     final gesture2 = (s2['gesture_score'] as num?)?.toInt() ?? score2;
 
+    final String? v1 = s1['video_path'];
+    final String? v2 = s2['video_path'];
+    final bool canCompareVideos = !kIsWeb &&
+        v1 != null &&
+        v1.isNotEmpty &&
+        v2 != null &&
+        v2.isNotEmpty &&
+        File(v1).existsSync() &&
+        File(v2).existsSync();
+
     Widget metricRow(String name, int val1, int val2) {
       final diff = val1 - val2;
       final diffText = diff > 0 ? '+$diff%' : '$diff%';
@@ -604,6 +615,37 @@ class _ProgressReportScreenState
               metricRow('Posture', posture1, posture2),
               metricRow('Head Stability', head1, head2),
               metricRow('Gestures', gesture1, gesture2),
+              if (canCompareVideos) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DualVideoCompareScreen(
+                            videoPath1: v1,
+                            videoPath2: v2,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.compare_rounded),
+                    label: const Text('Watch Both Side-by-Side',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
             ],
           ),
@@ -1333,6 +1375,56 @@ class SessionDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+            if (!kIsWeb &&
+                session['video_path'] != null &&
+                session['video_path'].toString().isNotEmpty &&
+                File(session['video_path'].toString()).existsSync()) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SingleVideoPlayerScreen(
+                          videoPath: session['video_path'].toString(),
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.play_circle_fill_rounded),
+                  label: const Text('Play Recording',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ] else if (kIsWeb) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white10 : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 18, color: Colors.grey),
+                    SizedBox(width: 8),
+                    Text('Playback available on mobile app',
+                        style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ],
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -1421,6 +1513,240 @@ class SessionDetailScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── SINGLE & DUAL VIDEO PLAYERS ───────────────────────────────────
+class SingleVideoPlayerScreen extends StatefulWidget {
+  final String videoPath;
+  const SingleVideoPlayerScreen({super.key, required this.videoPath});
+
+  @override
+  State<SingleVideoPlayerScreen> createState() => _SingleVideoPlayerScreenState();
+}
+
+class _SingleVideoPlayerScreenState extends State<SingleVideoPlayerScreen> {
+  late VideoPlayerController _controller;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.file(File(widget.videoPath))
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _isInitialized = true;
+          });
+          _controller.play();
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Session Playback'),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: _isInitialized
+            ? AspectRatio(
+                aspectRatio: _controller.value.aspectRatio,
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    VideoPlayer(_controller),
+                    VideoProgressIndicator(_controller, allowScrubbing: true),
+                    Center(
+                      child: IconButton(
+                        iconSize: 56,
+                        icon: Icon(
+                          _controller.value.isPlaying
+                              ? Icons.pause_circle_filled
+                              : Icons.play_circle_filled,
+                          color: Colors.white70,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _controller.value.isPlaying
+                                ? _controller.pause()
+                                : _controller.play();
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : const CircularProgressIndicator(color: Colors.white),
+      ),
+    );
+  }
+}
+
+class DualVideoCompareScreen extends StatefulWidget {
+  final String videoPath1;
+  final String videoPath2;
+  const DualVideoCompareScreen(
+      {super.key, required this.videoPath1, required this.videoPath2});
+
+  @override
+  State<DualVideoCompareScreen> createState() => _DualVideoCompareScreenState();
+}
+
+class _DualVideoCompareScreenState extends State<DualVideoCompareScreen> {
+  late VideoPlayerController _controller1;
+  late VideoPlayerController _controller2;
+  bool _init1 = false;
+  bool _init2 = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller1 = VideoPlayerController.file(File(widget.videoPath1))
+      ..initialize().then((_) {
+        if (mounted) setState(() => _init1 = true);
+      });
+
+    _controller2 = VideoPlayerController.file(File(widget.videoPath2))
+      ..initialize().then((_) {
+        if (mounted) setState(() => _init2 = true);
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller1.dispose();
+    _controller2.dispose();
+    super.dispose();
+  }
+
+  void _togglePlayBoth() {
+    setState(() {
+      if (_controller1.value.isPlaying || _controller2.value.isPlaying) {
+        _controller1.pause();
+        _controller2.pause();
+      } else {
+        _controller1.play();
+        _controller2.play();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isReady = _init1 && _init2;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Side-by-Side Comparison'),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+      ),
+      body: isReady
+          ? Column(
+              children: [
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFF1A73E8), width: 2),
+                    ),
+                    child: Stack(
+                      children: [
+                        Center(
+                          child: AspectRatio(
+                            aspectRatio: _controller1.value.aspectRatio,
+                            child: VideoPlayer(_controller1),
+                          ),
+                        ),
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            color: Colors.black.withOpacity(0.7),
+                            child: const Text('Session 1 (Latest)',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey, width: 2),
+                    ),
+                    child: Stack(
+                      children: [
+                        Center(
+                          child: AspectRatio(
+                            aspectRatio: _controller2.value.aspectRatio,
+                            child: VideoPlayer(_controller2),
+                          ),
+                        ),
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            color: Colors.black.withOpacity(0.7),
+                            child: const Text('Session 2 (Previous)',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: ElevatedButton.icon(
+                    onPressed: _togglePlayBoth,
+                    icon: Icon(
+                      _controller1.value.isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                    ),
+                    label: Text(_controller1.value.isPlaying
+                        ? 'Pause Both'
+                        : 'Play Both Simultaneously'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A73E8),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 14),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
     );
   }
 }
@@ -1627,6 +1953,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _totalSessions = 0;
   bool _showReminderBanner = false;
   bool _bannerDismissed = false;
+  List<Map<String, dynamic>> _parsedSessions = [];
 
   @override
   void initState() {
@@ -1727,6 +2054,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _bestScore = bestScore;
         _totalSessions = raw.length;
         _showReminderBanner = showReminder;
+        _parsedSessions = raw
+            .map((s) => jsonDecode(s) as Map<String, dynamic>)
+            .toList();
       });
     }
   }
@@ -2038,6 +2368,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                _buildCoachingPlanCard(context),
                 GestureDetector(
                   onTap: () async {
                     await Navigator.push(
@@ -2115,6 +2446,180 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCoachingPlanCard(BuildContext context) {
+    final primaryColor = AppThemeProvider.of(context).primaryColor;
+    final isDark = AppThemeProvider.of(context).isDarkMode;
+
+    if (_parsedSessions.length < 3) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.auto_awesome_rounded, color: primaryColor, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Your Coaching Plan 🎯',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Complete a few more sessions to unlock your personalized coaching plan (${_parsedSessions.length}/3 completed)',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Calculate metric averages
+    double totalPosture = 0;
+    double totalHead = 0;
+    double totalGesture = 0;
+
+    for (final s in _parsedSessions) {
+      final score = (s['score'] as num?)?.toDouble() ?? 0.0;
+      totalPosture += (s['posture_score'] as num?)?.toDouble() ?? score;
+      totalHead += (s['head_stability_score'] as num?)?.toDouble() ?? score;
+      totalGesture += (s['gesture_score'] as num?)?.toDouble() ?? score;
+    }
+
+    final n = _parsedSessions.length;
+    final avgPosture = totalPosture / n;
+    final avgHead = totalHead / n;
+    final avgGesture = totalGesture / n;
+
+    String lowestCategoryKey = 'posture';
+    double lowestScore = avgPosture;
+    String focusName = 'Posture & Body Alignment';
+
+    if (avgHead < lowestScore) {
+      lowestScore = avgHead;
+      lowestCategoryKey = 'head';
+      focusName = 'Head Stability & Eye Focus';
+    }
+    if (avgGesture < lowestScore) {
+      lowestScore = avgGesture;
+      lowestCategoryKey = 'gesture';
+      focusName = 'Hand Gestures & Movement';
+    }
+
+    final allCategories = TipsLibraryScreen.getCategories(primaryColor);
+    final targetCat = allCategories.firstWhere(
+      (c) => c['categoryKey'] == lowestCategoryKey,
+      orElse: () => allCategories.first,
+    );
+    final tips = (targetCat['tips'] as List<dynamic>).take(3).toList();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: primaryColor.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded, color: primaryColor, size: 22),
+              const SizedBox(width: 10),
+              Text(
+                'Your Personalized AI Coaching Plan',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Weekly Focus Area: $focusName (Avg: ${lowestScore.toInt()}%)',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...tips.map((t) {
+            final Map<String, String> tip = Map<String, String>.from(t as Map);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.check_circle_rounded,
+                      color: Color(0xFF10B981), size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tip['headline']!,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                          ),
+                        ),
+                        Text(
+                          tip['detail']!,
+                          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
       ),
     );
   }

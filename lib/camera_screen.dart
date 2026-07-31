@@ -223,6 +223,7 @@ class _CameraScreenState extends State<CameraScreen> {
         headStabilityScore: headScore,
         gestureScore: gestureScore,
         duration: '$_selectedDuration sec',
+        videoPath: videoFile.path,
       );
       setState(() {
         _isAnalyzing = false;
@@ -315,6 +316,7 @@ class _CameraScreenState extends State<CameraScreen> {
         headStabilityScore: headScore,
         gestureScore: gestureScore,
         duration: 'Gallery Video',
+        videoPath: videoFile.path,
       );
       setState(() {
         _isAnalyzing = false;

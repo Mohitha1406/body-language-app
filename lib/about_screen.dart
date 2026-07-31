@@ -98,7 +98,7 @@ class AboutScreen extends StatelessWidget {
             _infoCard(
               icon: Icons.auto_awesome_rounded,
               title: 'Planned Future Enhancements',
-              content: '• Voice tone and vocal confidence analysis (planned)\n• Real-time posture correction alerts\n• Multi-speaker group presentation analysis',
+              content: '• Voice tone and vocal confidence analysis (planned)\n• Real-time posture correction alerts\n• Multi-speaker group presentation analysis\n• Real-time skeleton overlay synced to session playback (planned)',
             ),
             const SizedBox(height: 12),
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'theme_provider.dart';
 import 'main.dart';
 
@@ -16,12 +19,29 @@ class HistoryScreen extends StatefulWidget {
     double headStabilityScore = 0.0,
     double gestureScore = 0.0,
     String duration = '15 sec',
+    String? videoPath,
   }) async {
+    String? savedVideoPath;
+    if (!kIsWeb && videoPath != null && videoPath.isNotEmpty) {
+      try {
+        final appDir = await getApplicationDocumentsDirectory();
+        final fileName = 'session_${DateTime.now().millisecondsSinceEpoch}.mp4';
+        final targetFile = File('${appDir.path}/$fileName');
+        final sourceFile = File(videoPath);
+        if (await sourceFile.exists()) {
+          await sourceFile.copy(targetFile.path);
+          savedVideoPath = targetFile.path;
+        }
+      } catch (e) {
+        debugPrint('Error saving session video: $e');
+      }
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final List<String> sessions =
         prefs.getStringList('sessions') ?? [];
     final now = DateTime.now();
-    final session = jsonEncode({
+    final sessionMap = <String, dynamic>{
       'date':
           '${now.day} ${_month(now.month)} ${now.year}',
       'time':
@@ -32,7 +52,11 @@ class HistoryScreen extends StatefulWidget {
       'gesture_score': gestureScore.toInt(),
       'duration': duration,
       'rating': 0,
-    });
+    };
+    if (savedVideoPath != null) {
+      sessionMap['video_path'] = savedVideoPath;
+    }
+    final session = jsonEncode(sessionMap);
     sessions.insert(0, session);
     await prefs.setStringList('sessions', sessions);
   }
