@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'settings_screen.dart';
 import 'theme_provider.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -13,6 +15,7 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  String? _imagePath;
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -33,12 +36,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? '';
     final phone = prefs.getString('user_phone') ?? '';
+    final avatar = prefs.getString('user_avatar_path');
     if (mounted) {
       setState(() {
         _nameController.text = name;
         _phoneController.text = phone;
+        _imagePath = avatar;
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      if (image != null && mounted) {
+        setState(() {
+          _imagePath = image.path;
+        });
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_avatar_path', image.path);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile photo selected!')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking photo: $e')),
+        );
+      }
     }
   }
 
@@ -59,6 +89,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_name', name);
       await prefs.setString('user_phone', phone);
+      if (_imagePath != null) {
+        await prefs.setString('user_avatar_path', _imagePath!);
+      }
 
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
@@ -97,6 +130,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final textColor = isDark ? Colors.white : const Color(0xFF1A1A2E);
 
+    final avatarProvider = getAvatarImageProvider(_imagePath);
+    final initials = _nameController.text.trim().isNotEmpty
+        ? _nameController.text
+            .trim()
+            .split(' ')
+            .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+            .take(2)
+            .join()
+        : 'U';
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -112,6 +155,75 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Profile Photo Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Profile Photo',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: textColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          CircleAvatar(
+                            radius: 46,
+                            backgroundColor: primaryColor.withOpacity(0.2),
+                            backgroundImage: avatarProvider,
+                            child: avatarProvider == null
+                                ? Text(
+                                    initials,
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryColor,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(height: 14),
+                          ElevatedButton.icon(
+                            onPressed: _pickImage,
+                            icon: const Icon(Icons.photo_library_rounded, size: 18),
+                            label: const Text(
+                              'Pick Photo from Gallery',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Full Name & Phone Number Card
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
