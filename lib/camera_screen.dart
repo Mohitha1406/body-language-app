@@ -30,7 +30,9 @@ class _CameraScreenState extends State<CameraScreen> {
   int _selectedDuration = 15;
   String? _errorMessage;
 
-  final List<String> _prompts = const [
+  bool _isInterviewMode = false;
+
+  final List<String> _casualPrompts = const [
     "Pretend you're introducing yourself to a new team",
     "Explain your favorite hobby in 30 seconds",
     "Practice answering: tell me about yourself",
@@ -39,26 +41,48 @@ class _CameraScreenState extends State<CameraScreen> {
     "Explain a complex concept to a beginner",
     "Practice presenting a project status update",
     "Deliver an inspiring opening line for a speech",
-    "Practice handling a tough interview question",
+    "Practice handling a tough question",
+  ];
+
+  final List<String> _interviewPrompts = const [
+    "Tell me about yourself",
+    "What is your greatest strength?",
+    "Why should we hire you?",
+    "Describe a challenge you overcame",
+    "Where do you see yourself in 5 years?",
+    "What is your biggest professional weakness?",
+    "Why do you want to work for our company?",
+    "Describe a conflict you resolved with a colleague",
+    "How do you prioritize tasks under tight deadlines?",
   ];
   late String _currentPrompt;
 
   @override
   void initState() {
     super.initState();
-    _currentPrompt = _prompts[Random().nextInt(_prompts.length)];
+    _currentPrompt = _casualPrompts[Random().nextInt(_casualPrompts.length)];
     _initCamera();
   }
 
   void _shufflePrompt() {
+    final activeList = _isInterviewMode ? _interviewPrompts : _casualPrompts;
     final random = Random();
     String nextPrompt;
     do {
-      nextPrompt = _prompts[random.nextInt(_prompts.length)];
-    } while (nextPrompt == _currentPrompt && _prompts.length > 1);
+      nextPrompt = activeList[random.nextInt(activeList.length)];
+    } while (nextPrompt == _currentPrompt && activeList.length > 1);
 
     setState(() {
       _currentPrompt = nextPrompt;
+    });
+  }
+
+  void _toggleMode(bool isInterview) {
+    if (_isInterviewMode == isInterview) return;
+    setState(() {
+      _isInterviewMode = isInterview;
+      final activeList = _isInterviewMode ? _interviewPrompts : _casualPrompts;
+      _currentPrompt = activeList[Random().nextInt(activeList.length)];
     });
   }
 
@@ -493,53 +517,145 @@ class _CameraScreenState extends State<CameraScreen> {
                     top: 16,
                     left: 16,
                     right: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.65),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.lightbulb_outline_rounded,
-                              color: Color(0xFFF59E0B), size: 22),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text(
-                                  'Practice Prompt',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.5,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Mode Selector Toggle
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => _toggleMode(false),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: !_isInterviewMode
+                                          ? Colors.white24
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.lightbulb_outline_rounded,
+                                            size: 14, color: Color(0xFFF59E0B)),
+                                        SizedBox(width: 6),
+                                        Text('Guided Practice',
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _currentPrompt,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => _toggleMode(true),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: _isInterviewMode
+                                          ? const Color(0xFF2563EB)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.business_center_rounded,
+                                            size: 14, color: Colors.white),
+                                        SizedBox(width: 6),
+                                        Text('Interview Mode',
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Prompt Card
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _isInterviewMode
+                                ? const Color(0xFF0F172A).withOpacity(0.85)
+                                : Colors.black.withOpacity(0.65),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: _isInterviewMode
+                                  ? const Color(0xFF3B82F6)
+                                  : Colors.white24,
+                              width: _isInterviewMode ? 1.5 : 1.0,
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.shuffle_rounded,
-                                color: Colors.white, size: 20),
-                            onPressed: _shufflePrompt,
-                            tooltip: 'Shuffle prompt',
+                          child: Row(
+                            children: [
+                              Icon(
+                                _isInterviewMode
+                                    ? Icons.business_center_rounded
+                                    : Icons.lightbulb_outline_rounded,
+                                color: _isInterviewMode
+                                    ? const Color(0xFF60A5FA)
+                                    : const Color(0xFFF59E0B),
+                                size: 22,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _isInterviewMode
+                                          ? 'INTERVIEW QUESTION'
+                                          : 'PRACTICE PROMPT',
+                                      style: TextStyle(
+                                        color: _isInterviewMode
+                                            ? const Color(0xFF93C5FD)
+                                            : Colors.white70,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _currentPrompt,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.shuffle_rounded,
+                                    color: Colors.white, size: 20),
+                                onPressed: _shufflePrompt,
+                                tooltip: 'Shuffle prompt',
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                   Container(

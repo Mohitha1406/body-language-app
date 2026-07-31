@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:share_plus/share_plus.dart';
 import 'theme_provider.dart';
 import 'login_screen.dart';
 
@@ -38,8 +40,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   TimeOfDay _reminderTime = const TimeOfDay(hour: 9, minute: 0);
 
-  String _language = 'en';
-
   @override
   void initState() {
     super.initState();
@@ -56,12 +56,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     final hour = prefs.getInt('reminder_hour') ?? 9;
     final minute = prefs.getInt('reminder_minute') ?? 0;
-    final lang = prefs.getString('language') ?? 'en';
 
     if (mounted) {
       setState(() {
         _reminderTime = TimeOfDay(hour: hour, minute: minute);
-        _language = lang;
       });
     }
   }
@@ -128,21 +126,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _setLanguage(String lang) async {
+  Future<void> _exportMyData() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language', lang);
-    if (mounted) {
-      setState(() {
-        _language = lang;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            lang == 'hi' ? 'भाषा बदलकर हिंदी कर दी गई है' : 'Language set to English',
-          ),
-        ),
-      );
+    final name = prefs.getString('user_name') ?? 'User';
+    final email = prefs.getString('user_email') ??
+        Supabase.instance.client.auth.currentUser?.email ??
+        'N/A';
+    final phone = prefs.getString('user_phone') ?? 'N/A';
+
+    final List<String> rawSessions = prefs.getStringList('sessions') ?? [];
+
+    final buffer = StringBuffer();
+    buffer.writeln('=== CONFIDAI USER PROFILE ===');
+    buffer.writeln('Name,Email,Phone');
+    buffer.writeln('"$name","$email","$phone"');
+    buffer.writeln();
+    buffer.writeln('=== SESSION HISTORY ===');
+    buffer.writeln(
+        'Date,Time,Duration,Overall Score %,Posture Score %,Head Stability Score %,Gesture Score %,Notes');
+
+    for (final sStr in rawSessions) {
+      try {
+        final Map<String, dynamic> s = jsonDecode(sStr);
+        final date = s['date'] ?? '';
+        final time = s['time'] ?? '';
+        final duration = s['duration'] ?? '';
+        final score = s['score'] ?? 0;
+        final posture = s['posture_score'] ?? score;
+        final head = s['head_stability_score'] ?? score;
+        final gesture = s['gesture_score'] ?? score;
+        final note = (s['note'] ?? '').toString().replaceAll('"', '""');
+
+        buffer.writeln(
+            '"$date","$time","$duration",$score,$posture,$head,$gesture,"$note"');
+      } catch (_) {}
     }
+
+    Share.share(
+      buffer.toString(),
+      subject: 'ConfidAI_User_Data_Export.csv',
+    );
   }
 
   Future<void> _deleteAccount() async {
@@ -265,6 +288,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -490,7 +517,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
-            // 5. Language Selection (Tips Content)
+            // Export My Data Section
             Container(
               padding: const EdgeInsets.all(18),
               margin: const EdgeInsets.only(bottom: 20),
@@ -509,10 +536,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.translate_rounded,
+                      Icon(Icons.download_rounded,
                           color: primaryColor, size: 22),
                       const SizedBox(width: 12),
-                      Text('Tips Language',
+                      Text('Export My Data',
                           style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -520,45 +547,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text('Select language for Tips Library content:',
+                  Text(
+                      'Export your profile information and full session history as a CSV file.',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                   const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Center(child: Text('English 🇬🇧')),
-                          selected: _language == 'en',
-                          selectedColor: primaryColor.withOpacity(0.2),
-                          labelStyle: TextStyle(
-                            color: _language == 'en' ? primaryColor : textColor,
-                            fontWeight: _language == 'en'
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                          onSelected: (val) {
-                            if (val) _setLanguage('en');
-                          },
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _exportMyData,
+                      icon: const Icon(Icons.share_rounded, size: 18),
+                      label: const Text('Export & Share Data',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Center(child: Text('हिंदी 🇮🇳')),
-                          selected: _language == 'hi',
-                          selectedColor: primaryColor.withOpacity(0.2),
-                          labelStyle: TextStyle(
-                            color: _language == 'hi' ? primaryColor : textColor,
-                            fontWeight: _language == 'hi'
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                          onSelected: (val) {
-                            if (val) _setLanguage('hi');
-                          },
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),

@@ -100,6 +100,10 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: primaryColor))

@@ -24,6 +24,7 @@ import 'achievements_screen.dart';
 import 'package:video_player/video_player.dart';
 import 'otp_verification_screen.dart';
 import 'reset_password_screen.dart';
+import 'confidence_journal_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -123,16 +124,8 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
   String? _avatarPath;
   String _userName = 'User';
-
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    HistoryScreen(),
-  ];
-
-  final List<String> _titles = const ['ConfidAI', 'Session History'];
 
   @override
   void initState() {
@@ -179,7 +172,7 @@ class _MainScreenState extends State<MainScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
+        title: const Text('ConfidAI'),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -229,11 +222,16 @@ class _MainScreenState extends State<MainScreen> {
               ),
               _drawerItem(Icons.home_rounded, 'Home', () {
                 Navigator.pop(context);
-                setState(() => _currentIndex = 0);
               }, primaryColor),
               _drawerItem(Icons.history_rounded, 'History', () {
                 Navigator.pop(context);
-                setState(() => _currentIndex = 1);
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const HistoryScreen()));
+              }, primaryColor),
+              _drawerItem(Icons.edit_note_rounded, 'Confidence Journal', () {
+                Navigator.pop(context);
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ConfidenceJournalScreen()));
               }, primaryColor),
               const Divider(),
               _drawerItem(Icons.settings_rounded, 'Settings', () async {
@@ -287,7 +285,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
       ),
-      body: _screens[_currentIndex],
+      body: const HomeScreen(),
     );
   }
 }
@@ -318,6 +316,10 @@ class NotificationsScreen extends StatelessWidget {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -877,6 +879,10 @@ class _ProgressReportScreenState
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -1801,6 +1807,10 @@ class HelpSupportScreen extends StatelessWidget {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
