@@ -129,10 +129,9 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = const [
     HomeScreen(),
     HistoryScreen(),
-    ProfileScreen(),
   ];
 
-  final List<String> _titles = const ['ConfidAI', 'Session History', 'Profile'];
+  final List<String> _titles = const ['ConfidAI', 'Session History'];
 
   @override
   void initState() {
@@ -234,10 +233,6 @@ class _MainScreenState extends State<MainScreen> {
               _drawerItem(Icons.history_rounded, 'History', () {
                 Navigator.pop(context);
                 setState(() => _currentIndex = 1);
-              }, primaryColor),
-              _drawerItem(Icons.person_rounded, 'Profile', () {
-                Navigator.pop(context);
-                setState(() => _currentIndex = 2);
               }, primaryColor),
               const Divider(),
               _drawerItem(Icons.settings_rounded, 'Settings', () async {
@@ -2165,32 +2160,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .reduce((a, b) => a > b ? a : b);
     }
 
-    setState(() {
-      _userName = name;
-      _userEmail = email;
-      _userPhone = phone;
-      _avatarPath = avatar;
-      _userInitials = name
-          .trim()
-          .split(' ')
-          .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
-          .take(2)
-          .join();
-      _totalSessions = raw.length;
-      _bestScore = bestScore;
-    });
-  }
-
-  Future<void> _logout() async {
-    await Supabase.instance.client.auth.signOut();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
     if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
+      setState(() {
+        _userName = name;
+        _userEmail = email;
+        _userPhone = phone;
+        _avatarPath = avatar;
+        _userInitials = name
+            .trim()
+            .split(' ')
+            .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+            .take(2)
+            .join();
+        _totalSessions = raw.length;
+        _bestScore = bestScore;
+      });
     }
   }
 
@@ -2225,44 +2209,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _settingItem(BuildContext context, IconData icon, String title,
-      {VoidCallback? onTap}) {
-    final primaryColor = AppThemeProvider.of(context).primaryColor;
-    final isDark = AppThemeProvider.of(context).isDarkMode;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2)),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: primaryColor, size: 22),
-            const SizedBox(width: 14),
-            Text(title,
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
-            const Spacer(),
-            Icon(Icons.arrow_forward_ios_rounded,
-                size: 14, color: Colors.grey[400]),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final primaryColor = AppThemeProvider.of(context).primaryColor;
@@ -2270,6 +2216,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Edit Profile',
+            onPressed: () async {
+              final updated = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
+              if (updated == true) {
+                _loadUser();
+              }
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -2314,79 +2280,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Best Score'),
                   _profileStat(context, '$_totalSessions', 'Streak'),
                 ],
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final updated = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const SettingsScreen()),
-                    );
-                    if (updated == true) _loadUser();
-                  },
-                  icon: const Icon(Icons.settings_rounded, size: 18),
-                  label: const Text('Settings',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              _settingItem(
-                context,
-                Icons.settings_suggest_rounded,
-                'Theme & Settings',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const NotificationsScreen()),
-                ),
-              ),
-              _settingItem(
-                context,
-                Icons.bar_chart_rounded,
-                'Progress Report',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const ProgressReportScreen()),
-                ),
-              ),
-              _settingItem(
-                context,
-                Icons.help_outline_rounded,
-                'Help & Support',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const HelpSupportScreen()),
-                ),
-              ),
-              _settingItem(
-                context,
-                Icons.info_outline_rounded,
-                'About App',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const AboutScreen()),
-                ),
-              ),
-              const SizedBox(height: 8),
-              _settingItem(
-                context,
-                Icons.logout_rounded,
-                'Logout',
-                onTap: _logout,
               ),
             ],
           ),
