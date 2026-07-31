@@ -473,13 +473,26 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = AppThemeProvider.of(context);
+    final primaryColor = themeProvider.primaryColor;
+    final isDark = themeProvider.isDarkMode;
+    final surfaceColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FF);
+    final bottomChromeColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final subTextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: surfaceColor,
       appBar: AppBar(
-        title: const Text('Record Analysis'),
-        backgroundColor: Colors.black,
+        title: const Text('Record Analysis',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Column(
         children: [
@@ -488,12 +501,12 @@ class _CameraScreenState extends State<CameraScreen> {
               alignment: Alignment.center,
               children: [
                 if (_isLoading)
-                  const Center(
-                      child: CircularProgressIndicator(color: Colors.white))
+                  Center(
+                      child: CircularProgressIndicator(color: primaryColor))
                 else if (_errorMessage != null)
                   Center(
                       child: Text(_errorMessage!,
-                          style: const TextStyle(color: Colors.white)))
+                          style: TextStyle(color: textColor)))
                 else if (_isInitialized && _controller != null)
                   ClipRect(
                     child: SizedBox.expand(
@@ -525,9 +538,21 @@ class _CameraScreenState extends State<CameraScreen> {
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.7),
+                            color: isDark
+                                ? Colors.black.withOpacity(0.75)
+                                : Colors.white.withOpacity(0.92),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white24),
+                            border: Border.all(
+                                color: isDark ? Colors.white24 : Colors.black12),
+                            boxShadow: isDark
+                                ? []
+                                : [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                           ),
                           child: Row(
                             children: [
@@ -535,24 +560,54 @@ class _CameraScreenState extends State<CameraScreen> {
                                 child: GestureDetector(
                                   onTap: () => _toggleMode(false),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 6),
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
                                     decoration: BoxDecoration(
                                       color: !_isInterviewMode
-                                          ? Colors.white24
+                                          ? (isDark
+                                              ? const Color(0xFFD97706)
+                                              : const Color(0xFFFEF3C7))
                                           : Colors.transparent,
                                       borderRadius: BorderRadius.circular(16),
+                                      border: !_isInterviewMode
+                                          ? Border.all(
+                                              color: isDark
+                                                  ? Colors.transparent
+                                                  : const Color(0xFFF59E0B),
+                                              width: 1,
+                                            )
+                                          : null,
                                     ),
-                                    child: const Row(
+                                    child: Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.lightbulb_outline_rounded,
-                                            size: 14, color: Color(0xFFF59E0B)),
-                                        SizedBox(width: 6),
-                                        Text('Guided Practice',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold)),
+                                        Icon(
+                                          Icons.lightbulb_outline_rounded,
+                                          size: 15,
+                                          color: !_isInterviewMode
+                                              ? (isDark
+                                                  ? Colors.white
+                                                  : const Color(0xFFD97706))
+                                              : (isDark
+                                                  ? Colors.white54
+                                                  : const Color(0xFF6B7280)),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Guided Practice',
+                                          style: TextStyle(
+                                            color: !_isInterviewMode
+                                                ? (isDark
+                                                    ? Colors.white
+                                                    : const Color(0xFF92400E))
+                                                : (isDark
+                                                    ? Colors.white60
+                                                    : const Color(0xFF4B5563)),
+                                            fontSize: 11,
+                                            fontWeight: !_isInterviewMode
+                                                ? FontWeight.bold
+                                                : FontWeight.w500,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -562,24 +617,54 @@ class _CameraScreenState extends State<CameraScreen> {
                                 child: GestureDetector(
                                   onTap: () => _toggleMode(true),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 6),
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
                                     decoration: BoxDecoration(
                                       color: _isInterviewMode
-                                          ? const Color(0xFF2563EB)
+                                          ? (isDark
+                                              ? const Color(0xFF2563EB)
+                                              : const Color(0xFFEFF6FF))
                                           : Colors.transparent,
                                       borderRadius: BorderRadius.circular(16),
+                                      border: _isInterviewMode
+                                          ? Border.all(
+                                              color: isDark
+                                                  ? Colors.transparent
+                                                  : const Color(0xFF3B82F6),
+                                              width: 1,
+                                            )
+                                          : null,
                                     ),
-                                    child: const Row(
+                                    child: Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.business_center_rounded,
-                                            size: 14, color: Colors.white),
-                                        SizedBox(width: 6),
-                                        Text('Interview Mode',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold)),
+                                        Icon(
+                                          Icons.business_center_rounded,
+                                          size: 15,
+                                          color: _isInterviewMode
+                                              ? (isDark
+                                                  ? Colors.white
+                                                  : const Color(0xFF2563EB))
+                                              : (isDark
+                                                  ? Colors.white54
+                                                  : const Color(0xFF6B7280)),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Interview Mode',
+                                          style: TextStyle(
+                                            color: _isInterviewMode
+                                                ? (isDark
+                                                    ? Colors.white
+                                                    : const Color(0xFF1E40AF))
+                                                : (isDark
+                                                    ? Colors.white60
+                                                    : const Color(0xFF4B5563)),
+                                            fontSize: 11,
+                                            fontWeight: _isInterviewMode
+                                                ? FontWeight.bold
+                                                : FontWeight.w500,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -594,15 +679,30 @@ class _CameraScreenState extends State<CameraScreen> {
                               horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
                             color: _isInterviewMode
-                                ? const Color(0xFF0F172A).withOpacity(0.85)
-                                : Colors.black.withOpacity(0.65),
+                                ? (isDark
+                                    ? const Color(0xFF0F172A).withOpacity(0.85)
+                                    : const Color(0xFFF0F9FF))
+                                : (isDark
+                                    ? Colors.black.withOpacity(0.75)
+                                    : Colors.white.withOpacity(0.92)),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
                               color: _isInterviewMode
                                   ? const Color(0xFF3B82F6)
-                                  : Colors.white24,
-                              width: _isInterviewMode ? 1.5 : 1.0,
+                                  : (isDark
+                                      ? Colors.white24
+                                      : const Color(0xFFF59E0B)),
+                              width: 1.5,
                             ),
+                            boxShadow: isDark
+                                ? []
+                                : [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                           ),
                           child: Row(
                             children: [
@@ -611,8 +711,12 @@ class _CameraScreenState extends State<CameraScreen> {
                                     ? Icons.business_center_rounded
                                     : Icons.lightbulb_outline_rounded,
                                 color: _isInterviewMode
-                                    ? const Color(0xFF60A5FA)
-                                    : const Color(0xFFF59E0B),
+                                    ? (isDark
+                                        ? const Color(0xFF60A5FA)
+                                        : const Color(0xFF2563EB))
+                                    : (isDark
+                                        ? const Color(0xFFF59E0B)
+                                        : const Color(0xFFD97706)),
                                 size: 22,
                               ),
                               const SizedBox(width: 10),
@@ -627,8 +731,12 @@ class _CameraScreenState extends State<CameraScreen> {
                                           : 'PRACTICE PROMPT',
                                       style: TextStyle(
                                         color: _isInterviewMode
-                                            ? const Color(0xFF93C5FD)
-                                            : Colors.white70,
+                                            ? (isDark
+                                                ? const Color(0xFF93C5FD)
+                                                : const Color(0xFF1E40AF))
+                                            : (isDark
+                                                ? Colors.white70
+                                                : const Color(0xFF92400E)),
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
                                         letterSpacing: 0.5,
@@ -637,8 +745,10 @@ class _CameraScreenState extends State<CameraScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       _currentPrompt,
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: isDark
+                                            ? Colors.white
+                                            : const Color(0xFF1F2937),
                                         fontSize: 12,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -647,8 +757,13 @@ class _CameraScreenState extends State<CameraScreen> {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.shuffle_rounded,
-                                    color: Colors.white, size: 20),
+                                icon: Icon(
+                                  Icons.shuffle_rounded,
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF4B5563),
+                                  size: 20,
+                                ),
                                 onPressed: _shufflePrompt,
                                 tooltip: 'Shuffle prompt',
                               ),
@@ -743,14 +858,17 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
 
           Container(
-            color: Colors.black,
+            color: bottomChromeColor,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (!_isRecording && _countdown == 0 && !_isAnalyzing) ...[
-                  const Text('Select Duration',
-                      style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  Text('Select Duration',
+                      style: TextStyle(
+                          color: subTextColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500)),
                   const SizedBox(height: 8),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -762,17 +880,33 @@ class _CameraScreenState extends State<CameraScreen> {
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: ChoiceChip(
-                              label: Text('${dur}s',
-                                  style: TextStyle(
-                                      color: isSelected
-                                          ? Colors.black
-                                          : Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12)),
+                              label: Text(
+                                '${dur}s',
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : (isDark
+                                          ? Colors.white70
+                                          : const Color(0xFF374151)),
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
                               selected: isSelected,
-                              selectedColor: Colors.white,
-                              backgroundColor: Colors.white12,
+                              selectedColor: primaryColor,
+                              backgroundColor: isDark
+                                  ? const Color(0xFF2D2D2D)
+                                  : const Color(0xFFE5E7EB),
                               showCheckmark: false,
+                              side: BorderSide(
+                                color: isSelected
+                                    ? primaryColor
+                                    : (isDark
+                                        ? Colors.white12
+                                        : const Color(0xFFD1D5DB)),
+                              ),
                               onSelected: (selected) {
                                 if (selected) {
                                   setState(() => _selectedDuration = dur);
@@ -789,18 +923,34 @@ class _CameraScreenState extends State<CameraScreen> {
                                   ? 'Custom (${_selectedDuration}s)'
                                   : 'Custom',
                               style: TextStyle(
-                                  color: ![10, 15, 20, 30, 60]
-                                          .contains(_selectedDuration)
-                                      ? Colors.black
-                                      : Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12),
+                                color: ![10, 15, 20, 30, 60]
+                                        .contains(_selectedDuration)
+                                    ? Colors.white
+                                    : (isDark
+                                        ? Colors.white70
+                                        : const Color(0xFF374151)),
+                                fontWeight: ![10, 15, 20, 30, 60]
+                                        .contains(_selectedDuration)
+                                    ? FontWeight.bold
+                                    : FontWeight.w600,
+                                fontSize: 12,
+                              ),
                             ),
                             selected: ![10, 15, 20, 30, 60]
                                 .contains(_selectedDuration),
-                            selectedColor: Colors.white,
-                            backgroundColor: Colors.white12,
+                            selectedColor: primaryColor,
+                            backgroundColor: isDark
+                                ? const Color(0xFF2D2D2D)
+                                : const Color(0xFFE5E7EB),
                             showCheckmark: false,
+                            side: BorderSide(
+                              color: ![10, 15, 20, 30, 60]
+                                      .contains(_selectedDuration)
+                                  ? primaryColor
+                                  : (isDark
+                                      ? Colors.white12
+                                      : const Color(0xFFD1D5DB)),
+                            ),
                             onSelected: (selected) {
                               _showCustomDurationDialog();
                             },
@@ -824,19 +974,29 @@ class _CameraScreenState extends State<CameraScreen> {
                               width: 56,
                               height: 56,
                               decoration: BoxDecoration(
-                                color: Colors.white12,
+                                color: isDark
+                                    ? Colors.white12
+                                    : const Color(0xFFF3F4F6),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                    color: Colors.white38, width: 1.5),
+                                    color: isDark
+                                        ? Colors.white38
+                                        : const Color(0xFFD1D5DB),
+                                    width: 1.5),
                               ),
-                              child: const Icon(Icons.photo_library_rounded,
-                                  color: Colors.white, size: 26),
+                              child: Icon(Icons.photo_library_rounded,
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF374151),
+                                  size: 26),
                             ),
                           ),
                           const SizedBox(height: 6),
-                          const Text('Gallery',
+                          Text('Gallery',
                               style: TextStyle(
-                                  color: Colors.white54, fontSize: 11)),
+                                  color: subTextColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500)),
                         ],
                       ),
                       const SizedBox(width: 36),
@@ -850,10 +1010,12 @@ class _CameraScreenState extends State<CameraScreen> {
                               width: 68,
                               height: 68,
                               decoration: BoxDecoration(
-                                color: _isInitialized ? Colors.red : Colors.grey,
+                                color:
+                                    _isInitialized ? Colors.red : Colors.grey,
                                 shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: Colors.white, width: 3),
+                                border: Border.all(
+                                    color: isDark ? Colors.white : primaryColor,
+                                    width: 3),
                                 boxShadow: [
                                   BoxShadow(
                                       color: Colors.red.withOpacity(0.4),
@@ -867,8 +1029,10 @@ class _CameraScreenState extends State<CameraScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text('Record ($_selectedDuration s)',
-                              style: const TextStyle(
-                                  color: Colors.white54, fontSize: 11)),
+                              style: TextStyle(
+                                  color: subTextColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500)),
                         ],
                       ),
                     ],
@@ -878,12 +1042,15 @@ class _CameraScreenState extends State<CameraScreen> {
                   Text(
                       'Recording body language...\n${_selectedDuration - _recordingSeconds} seconds remaining',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 14)),
+                      style: TextStyle(
+                          color: textColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
                 ],
                 if (_countdown > 0) ...[
                   Text('Starting in $_countdown...',
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: textColor,
                           fontSize: 18,
                           fontWeight: FontWeight.bold)),
                 ],
@@ -895,5 +1062,3 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 }
-
-
