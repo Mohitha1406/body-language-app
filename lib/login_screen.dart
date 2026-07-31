@@ -68,11 +68,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (response.user != null) {
           // Get name from profiles
-          final profile = await supabase
+          Map<String, dynamic>? profile = await supabase
               .from('profiles')
               .select()
               .eq('id', response.user!.id)
-              .single();
+              .maybeSingle();
+
+          if (profile == null) {
+            final defaultName = email.contains('@') ? email.split('@').first : email;
+            final defaultProfile = {
+              'id': response.user!.id,
+              'name': defaultName,
+              'email': email,
+              'phone': '',
+            };
+            try {
+              await supabase.from('profiles').insert(defaultProfile);
+            } catch (_) {
+              // Handle insert exception gracefully
+            }
+            profile = defaultProfile;
+          }
 
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('is_logged_in', true);
@@ -97,14 +113,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (response.user != null) {
-          // Save profile
-          await supabase.from('profiles').insert({
-            'id': response.user!.id,
-            'name': name,
-            'email': email,
-            'phone': phone,
-          });
-
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('user_name', name);
           await prefs.setString('user_email', email);
@@ -114,7 +122,11 @@ class _LoginScreenState extends State<LoginScreen> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                  builder: (_) => OtpVerificationScreen(email: email)),
+                  builder: (_) => OtpVerificationScreen(
+                        email: email,
+                        name: name,
+                        phone: phone,
+                      )),
             );
           }
         }

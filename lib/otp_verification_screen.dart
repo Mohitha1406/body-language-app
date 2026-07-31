@@ -6,7 +6,15 @@ import 'main.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
-  const OtpVerificationScreen({super.key, required this.email});
+  final String? name;
+  final String? phone;
+
+  const OtpVerificationScreen({
+    super.key,
+    required this.email,
+    this.name,
+    this.phone,
+  });
 
   @override
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
@@ -61,6 +69,20 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       );
 
       if (response.session != null || response.user != null) {
+        final user = response.user ?? response.session?.user;
+        if (user != null) {
+          try {
+            await Supabase.instance.client.from('profiles').insert({
+              'id': user.id,
+              'name': widget.name ?? '',
+              'email': widget.email,
+              'phone': widget.phone ?? '',
+            });
+          } catch (_) {
+            // Profile may already exist or handle gracefully
+          }
+        }
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_logged_in', true);
 
