@@ -258,5 +258,48 @@ void main() {
         expect(s, equals(i));
       }
     });
+
+    test('SCORE-041: Score calculation with maximum posture score (100) and zero head/gesture', () {
+      expect(ScoreCalculator.calculateOverallScore(postureScore: 100, headStabilityScore: 0, gestureScore: 0), equals(40));
+    });
+
+    test('SCORE-042: Score calculation with maximum head stability score (100) and zero posture/gesture', () {
+      expect(ScoreCalculator.calculateOverallScore(postureScore: 0, headStabilityScore: 100, gestureScore: 0), equals(30));
+    });
+
+    test('SCORE-043: Score calculation with maximum gesture score (100) and zero posture/head', () {
+      expect(ScoreCalculator.calculateOverallScore(postureScore: 0, headStabilityScore: 0, gestureScore: 100), equals(30));
+    });
+
+    test('SCORE-044: Score delta zero formatting', () {
+      expect(ScoreCalculator.formatScoreDelta(0), equals('0%'));
+    });
+
+    test('SCORE-045: Score delta double digit positive formatting', () {
+      expect(ScoreCalculator.formatScoreDelta(42), equals('+42%'));
+    });
+
+    test('SCORE-046: Score delta double digit negative formatting', () {
+      expect(ScoreCalculator.formatScoreDelta(-28), equals('-28%'));
+    });
+
+    test('SCORE-047: Posture 50, Head 70, Gesture 90 weighted sum (67)', () {
+      // 50*0.4 + 70*0.3 + 90*0.3 = 20 + 21 + 27 = 68
+      expect(ScoreCalculator.calculateOverallScore(postureScore: 50, headStabilityScore: 70, gestureScore: 90), equals(68));
+    });
+
+    test('SCORE-048: Posture 95, Head 85, Gesture 75 weighted sum (86)', () {
+      // 95*0.4 + 85*0.3 + 75*0.3 = 38 + 25.5 + 22.5 = 86
+      expect(ScoreCalculator.calculateOverallScore(postureScore: 95, headStabilityScore: 85, gestureScore: 75), equals(86));
+    });
+
+    test('SCORE-049: Score difference between identical positive values', () {
+      expect(ScoreCalculator.calculateScoreDifference(50, 50), equals(0));
+    });
+
+    test('SCORE-050: Clamping extreme positive inputs (1000, 1000, 1000)', () {
+      expect(ScoreCalculator.calculateOverallScore(postureScore: 1000, headStabilityScore: 1000, gestureScore: 1000), equals(100));
+    });
   });
 }
+

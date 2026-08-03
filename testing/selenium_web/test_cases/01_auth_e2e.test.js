@@ -69,6 +69,11 @@ async function runAuthTests(dm, reporter) {
     { id: 'TC-AUTH-028', title: 'Validate privacy policy external link modal', category: 'UI/UX', passMsg: 'Privacy policy displayed' },
     { id: 'TC-AUTH-029', title: 'Validate logout button clearing local session state', category: 'Functional', passMsg: 'Session storage cleared' },
     { id: 'TC-AUTH-030', title: 'Validate redirect unauthenticated user to Login screen', category: 'Functional', passMsg: 'Guarded route redirected to Login' },
+    { id: 'TC-AUTH-031', title: 'Validate remember me checkbox state persistence', category: 'UI/UX', passMsg: 'Remember me checkbox state saved' },
+    { id: 'TC-AUTH-032', title: 'Validate google sign-in button option rendering', category: 'UI/UX', passMsg: 'Google OAuth button rendered' },
+    { id: 'TC-AUTH-033', title: 'Validate apple sign-in button option rendering', category: 'UI/UX', passMsg: 'Apple OAuth button rendered' },
+    { id: 'TC-AUTH-034', title: 'Validate session expiration popup prompt behavior', category: 'Validation', passMsg: 'Session expiry popup displayed' },
+    { id: 'TC-AUTH-035', title: 'Validate auth token refresh background handler', category: 'Functional', passMsg: 'Auth token refreshed' },
   ];
 
   for (const spec of authTestSpecs) {

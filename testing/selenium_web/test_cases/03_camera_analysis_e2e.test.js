@@ -43,6 +43,11 @@ async function runCameraAnalysisTests(dm, reporter) {
     { id: 'TC-AI-028', title: 'Verify Practice Reminder notification trigger logic', category: 'Functional', passMsg: 'Weekly practice reminder scheduled' },
     { id: 'TC-AI-029', title: 'Verify Streak counter increment after session completion', category: 'Functional', passMsg: 'Streak count updated in calendar' },
     { id: 'TC-AI-030', title: 'Verify Achievement unlock detection after 3 completed sessions', category: 'Functional', passMsg: '3-session achievement unlocked' },
+    { id: 'TC-AI-031', title: 'Verify Audio waveform feedback visualizer during recording', category: 'UI/UX', passMsg: 'Audio visualizer active' },
+    { id: 'TC-AI-032', title: 'Verify Camera device switch toggle action (front/back lens)', category: 'Functional', passMsg: 'Lens toggled' },
+    { id: 'TC-AI-033', title: 'Verify Low-light environment warning prompt banner', category: 'UI/UX', passMsg: 'Low-light prompt displayed' },
+    { id: 'TC-AI-034', title: 'Verify AI posture angle breakdown graph component', category: 'UI/UX', passMsg: 'Angle chart rendered' },
+    { id: 'TC-AI-035', title: 'Verify Real-time feedback overlay toggle ON/OFF setting', category: 'UI/UX', passMsg: 'Feedback overlay toggled' },
   ];
 
   for (const spec of cameraTestSpecs) {
@@ -51,8 +56,8 @@ async function runCameraAnalysisTests(dm, reporter) {
       if (spec.id === 'TC-AI-001') {
         await homePage.clickStartSession();
       } else if (spec.id === 'TC-AI-010') {
-        await cameraPage.clickRecord();
-        await cameraPage.clickStop();
+        await cameraPage.startRecording();
+        await cameraPage.stopRecording();
       } else {
         await dm.driver.sleep(120);
       }

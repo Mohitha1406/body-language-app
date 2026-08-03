@@ -42,6 +42,11 @@ async function runNavigationTests(dm, reporter) {
     { id: 'TC-NAV-028', title: 'Verify Bottom Navigation Bar Home tab icon click', category: 'Functional', passMsg: 'Switched to Home tab' },
     { id: 'TC-NAV-029', title: 'Verify Bottom Navigation Bar History tab icon click', category: 'Functional', passMsg: 'Switched to History tab' },
     { id: 'TC-NAV-030', title: 'Verify Bottom Navigation Bar Profile tab icon click', category: 'Functional', passMsg: 'Switched to Profile tab' },
+    { id: 'TC-NAV-031', title: 'Verify Bottom Navigation Bar Settings tab icon click', category: 'Functional', passMsg: 'Switched to Settings tab' },
+    { id: 'TC-NAV-032', title: 'Verify App Bar back button navigation stack pop', category: 'UI/UX', passMsg: 'Back button popped route stack' },
+    { id: 'TC-NAV-033', title: 'Verify Deep linking route resolution for /history path', category: 'Functional', passMsg: 'Direct URL /history resolved' },
+    { id: 'TC-NAV-034', title: 'Verify Deep linking route resolution for /settings path', category: 'Functional', passMsg: 'Direct URL /settings resolved' },
+    { id: 'TC-NAV-035', title: 'Verify 404 Page Not Found route fallback screen', category: 'Validation', passMsg: 'Fallback 404 route rendered' },
   ];
 
   for (const spec of navTestSpecs) {

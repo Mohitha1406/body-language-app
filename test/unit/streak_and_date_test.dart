@@ -219,5 +219,57 @@ void main() {
       final set = {'30 Jul 2026', '30 Jul 2026', '29 Jul 2026'};
       expect(StreakDateUtils.calculateStreakCount(set, today), equals(2));
     });
+
+    test('STREAK-041: Streak calculation for leap day February 29', () {
+      final leapDay = DateTime(2028, 2, 29);
+      final set = {'29 Feb 2028', '28 Feb 2028'};
+      expect(StreakDateUtils.calculateStreakCount(set, leapDay), equals(2));
+    });
+
+    test('STREAK-042: Streak calculation for single day session on Jan 1', () {
+      final newYear = DateTime(2026, 1, 1);
+      final set = {'1 Jan 2026'};
+      expect(StreakDateUtils.calculateStreakCount(set, newYear), equals(1));
+    });
+
+    test('STREAK-043: Duration formatting for 3600 seconds (60:00)', () {
+      expect(StreakDateUtils.formatDurationSeconds(3600), equals('60:00'));
+    });
+
+    test('STREAK-044: Duration formatting for 59 seconds (00:59)', () {
+      expect(StreakDateUtils.formatDurationSeconds(59), equals('00:59'));
+    });
+
+    test('STREAK-045: Duration formatting for 61 seconds (01:01)', () {
+      expect(StreakDateUtils.formatDurationSeconds(61), equals('01:01'));
+    });
+
+    test('STREAK-046: Format date key for December 1st', () {
+      expect(StreakDateUtils.formatDateKey(DateTime(2026, 12, 1)), equals('1 Dec 2026'));
+    });
+
+    test('STREAK-047: Format date key for February 1st', () {
+      expect(StreakDateUtils.formatDateKey(DateTime(2026, 2, 1)), equals('1 Feb 2026'));
+    });
+
+    test('STREAK-048: Streak calculation with future date entry ignored', () {
+      final today = DateTime(2026, 7, 30);
+      final set = {'31 Jul 2026', '30 Jul 2026', '29 Jul 2026'};
+      expect(StreakDateUtils.calculateStreakCount(set, today), equals(2));
+    });
+
+    test('STREAK-049: Duration formatting for 1000 seconds (16:40)', () {
+      expect(StreakDateUtils.formatDurationSeconds(1000), equals('16:40'));
+    });
+
+    test('STREAK-050: Streak calculation for 14 continuous days across two months', () {
+      final today = DateTime(2026, 8, 7);
+      final set = <String>{};
+      for (int i = 0; i < 14; i++) {
+        set.add(StreakDateUtils.formatDateKey(today.subtract(Duration(days: i))));
+      }
+      expect(StreakDateUtils.calculateStreakCount(set, today), equals(14));
+    });
   });
 }
+

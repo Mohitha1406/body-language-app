@@ -287,5 +287,69 @@ void main() {
       await provider.setAccentColor('orange');
       expect(provider.accentName, equals('orange'));
     });
+
+    test('DATA-041: JSON encoding of special characters in note field', () {
+      final session = {'note': 'Line 1\nLine 2 "quotes" & <tags>'};
+      final encoded = jsonEncode(session);
+      expect(encoded, contains('\\n'));
+      expect(encoded, contains('\\"quotes\\"'));
+    });
+
+    test('DATA-042: JSON decoding of float posture score', () {
+      final jsonStr = '{"posture_score": 84.6}';
+      final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
+      final p = (decoded['posture_score'] as num).toInt();
+      expect(p, equals(84));
+    });
+
+    test('DATA-043: Session list JSON serialization handles empty array', () {
+      final List<Map<String, dynamic>> emptyList = [];
+      expect(jsonEncode(emptyList), equals('[]'));
+    });
+
+    test('DATA-044: ThemeProvider initial state verification from SharedPreferences', () async {
+      final provider = ThemeProvider();
+      expect(provider.accentName, equals('blue'));
+      expect(provider.isDarkMode, isFalse);
+    });
+
+    test('DATA-045: CSV field quote escaping for strings with quotes', () {
+      final str = 'He said "Hello"';
+      final escaped = '"${str.replaceAll('"', '""')}"';
+      expect(escaped, equals('"He said ""Hello"""'));
+    });
+
+    test('DATA-046: CSV field commas wrapping in double quotes', () {
+      final str = ' posture, gesture, head ';
+      final wrapped = str.contains(',') ? '"$str"' : str;
+      expect(wrapped.startsWith('"'), isTrue);
+    });
+
+    test('DATA-047: Multiple session array score mapping and average', () {
+      final sessions = [{'score': 60}, {'score': 80}, {'score': 100}];
+      final scores = sessions.map((s) => s['score'] as int).toList();
+      final sum = scores.reduce((a, b) => a + b);
+      expect(sum / scores.length, equals(80.0));
+    });
+
+    test('DATA-048: ThemeProvider setting dark mode true persists value', () async {
+      final provider = ThemeProvider();
+      await provider.setDarkMode(true);
+      expect(provider.isDarkMode, isTrue);
+    });
+
+    test('DATA-049: ThemeProvider setting accent color orange persists value', () async {
+      final provider = ThemeProvider();
+      await provider.setAccentColor('orange');
+      expect(provider.accentName, equals('orange'));
+    });
+
+    test('DATA-050: JSON deserialization safely handles unknown keys', () {
+      final jsonStr = '{"date":"2026-07-31","score":90,"unknown_field":"value"}';
+      final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
+      expect(decoded['score'], equals(90));
+      expect(decoded.containsKey('unknown_field'), isTrue);
+    });
   });
 }
+

@@ -129,6 +129,14 @@ class ExcelReporter {
     }
 
     await workbook.xlsx.writeFile(this.reportFilePath);
+
+    // Sync copy to root reports directory if running inside testing directory
+    const rootReportsDir = path.resolve(__dirname, '../../../reports');
+    if (fs.existsSync(rootReportsDir)) {
+      const rootReportPath = path.join(rootReportsDir, path.basename(this.reportFilePath));
+      fs.copyFileSync(this.reportFilePath, rootReportPath);
+    }
+
     console.log(`\n[ExcelReporter] E2E Excel Analysis Report successfully generated at:\n => ${path.resolve(this.reportFilePath)}\n`);
   }
 }

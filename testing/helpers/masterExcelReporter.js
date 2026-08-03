@@ -147,9 +147,17 @@ class MasterExcelReporter {
     }
 
     await workbook.xlsx.writeFile(this.reportFilePath);
+
+    // Sync copy to root reports directory if running inside testing directory
+    const rootReportsDir = path.resolve(__dirname, '../../reports');
+    if (fs.existsSync(rootReportsDir)) {
+      const rootReportPath = path.join(rootReportsDir, path.basename(this.reportFilePath));
+      fs.copyFileSync(this.reportFilePath, rootReportPath);
+    }
+
     console.log(`\n================================================================`);
     console.log(`🎉 Master E2E Excel Analysis Report compiled successfully!`);
-    console.log(` => Location: ${path.resolve(this.reportFilePath)}`);
+    console.log(` => Primary Location: ${path.resolve(this.reportFilePath)}`);
     console.log(`================================================================\n`);
   }
 }

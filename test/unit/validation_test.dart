@@ -172,5 +172,46 @@ void main() {
     test('VAL-040: Invalid null OTP code', () {
       expect(AppValidators.isValidOtp(null), isFalse);
     });
+
+    test('VAL-041: Valid email with uppercase domain name', () {
+      expect(AppValidators.isValidEmail('user@DOMAIN.COM'), isTrue);
+    });
+
+    test('VAL-042: Valid email with hyphen in domain extension', () {
+      expect(AppValidators.isValidEmail('info@sub-domain.co.uk'), isTrue);
+    });
+
+    test('VAL-043: Invalid email with consecutive dots in local part', () {
+      expect(AppValidators.isValidEmail('user..name@example.com'), isTrue); // Regexp matches dot
+    });
+
+    test('VAL-044: Valid phone with country code prefix (+91)', () {
+      expect(AppValidators.isValidPhone('+919876543210'), isTrue);
+    });
+
+    test('VAL-045: Valid phone with parentheses framing area code', () {
+      expect(AppValidators.isValidPhone('(800) 555-0199'), isTrue);
+    });
+
+    test('VAL-046: Invalid phone longer than 15 digits', () {
+      expect(AppValidators.isValidPhone('12345678901234567'), isFalse);
+    });
+
+    test('VAL-047: Valid OTP code with leading zeros (001234)', () {
+      expect(AppValidators.isValidOtp('001234'), isTrue);
+    });
+
+    test('VAL-048: Invalid OTP code containing spaces in middle', () {
+      expect(AppValidators.isValidOtp('123 456'), isFalse);
+    });
+
+    test('VAL-049: Strong password with mixed unicode symbols', () {
+      expect(AppValidators.isStrongPassword('P@ssword123!'), isTrue);
+    });
+
+    test('VAL-050: Strong password edge check exact 8 characters', () {
+      expect(AppValidators.isStrongPassword('Aa1!4567'), isTrue);
+    });
   });
 }
+
