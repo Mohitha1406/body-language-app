@@ -2,13 +2,16 @@ const DriverManager = require('./helpers/driverManager');
 const ExcelReporter = require('./helpers/excelReporter');
 const config = require('./config');
 
-const runAuthTests = require('./test_cases/01_auth_e2e.test.js');
-const runNavigationTests = require('./test_cases/02_navigation_e2e.test.js');
-const runCameraAnalysisTests = require('./test_cases/03_camera_analysis_e2e.test.js');
+const runUnitAndLogicTests = require('./test_cases/01_unit_and_logic.test.js');
+const runFunctionalWebTests = require('./test_cases/02_functional_web.test.js');
+const runValidationFormTests = require('./test_cases/03_validation_forms.test.js');
+const runUiUxDesignTests = require('./test_cases/04_ui_ux_design.test.js');
+const runVulnerabilitySecurityTests = require('./test_cases/05_vulnerability_security.test.js');
+const runLoadPerformanceTests = require('./test_cases/06_load_performance.test.js');
 
 async function executeSeleniumWebE2E() {
   console.log(`\n======================================================`);
-  console.log(`🚀 Starting ConfidAI Selenium Web E2E Test Suite`);
+  console.log(`🚀 Starting ConfidAI Selenium Web E2E Test Suite (300 Tests)`);
   console.log(`======================================================`);
 
   const dm = new DriverManager();
@@ -18,10 +21,13 @@ async function executeSeleniumWebE2E() {
     console.log(`[DriverManager] Initializing Selenium Browser (${config.browser})...`);
     await dm.buildDriver();
 
-    // Execute Test Suites
-    await runAuthTests(dm, reporter);
-    await runNavigationTests(dm, reporter);
-    await runCameraAnalysisTests(dm, reporter);
+    // Execute 300 Selenium Web Test Cases
+    await runUnitAndLogicTests(dm, reporter);
+    await runFunctionalWebTests(dm, reporter);
+    await runValidationFormTests(dm, reporter);
+    await runUiUxDesignTests(dm, reporter);
+    await runVulnerabilitySecurityTests(dm, reporter);
+    await runLoadPerformanceTests(dm, reporter);
 
   } catch (globalErr) {
     console.error('Fatal execution error during Selenium test suite:', globalErr);

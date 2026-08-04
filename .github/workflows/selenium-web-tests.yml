@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  selenium-tests:
+  selenium-web-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -42,7 +42,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
 
-      - name: Run Master E2E Automation Suite & Selenium Web Tests
+      - name: Run Selenium Web E2E Test Suite (300 Test Cases)
         env:
           HEADLESS: "true"
         run: |
@@ -50,12 +50,11 @@ jobs:
           npm install
           node run_all_tests.js
 
-      - name: Upload Master Excel Test Report Artifact
+      - name: Upload Selenium Web Excel Test Report Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: master-e2e-test-reports
+          name: selenium-web-test-reports
           path: |
-            testing/reports/Master_E2E_Analysis_Report.xlsx
             testing/reports/Selenium_Web_E2E_Test_Report.xlsx
-            testing/reports/Appium_Mobile_E2E_Test_Report.xlsx
+            testing/reports/Master_E2E_Analysis_Report.xlsx
