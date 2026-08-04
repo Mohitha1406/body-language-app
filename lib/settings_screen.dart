@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:share_plus/share_plus.dart';
@@ -39,6 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isUpdatingPassword = false;
 
   TimeOfDay _reminderTime = const TimeOfDay(hour: 9, minute: 0);
+  static const String _liveWebAppUrl = 'https://confidai-b469a.web.app';
 
   @override
   void initState() {
@@ -61,6 +64,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _reminderTime = TimeOfDay(hour: hour, minute: minute);
       });
+    }
+  }
+
+  Future<void> _launchLiveWebApp() async {
+    final uri = Uri.parse(_liveWebAppUrl);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      await Clipboard.setData(const ClipboardData(text: _liveWebAppUrl));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Copied link: $_liveWebAppUrl to clipboard!'),
+          ),
+        );
+      }
     }
   }
 
@@ -374,7 +397,116 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
-            // 3. Change Password
+            // 3. Live Web Application Link
+            Container(
+              padding: const EdgeInsets.all(18),
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.language_rounded,
+                          color: primaryColor, size: 22),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Live Web Application',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Access your ConfidAI Body Language analysis web app online:',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF2A2A3C)
+                          : const Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: primaryColor.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.link_rounded, color: primaryColor, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SelectableText(
+                            _liveWebAppUrl,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy_rounded, size: 18),
+                          tooltip: 'Copy Link',
+                          color: primaryColor,
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              const ClipboardData(text: _liveWebAppUrl),
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Live web app link copied to clipboard!'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _launchLiveWebApp,
+                      icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                      label: const Text(
+                        'Open Live Web App',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 4. Change Password
             Container(
               padding: const EdgeInsets.all(18),
               margin: const EdgeInsets.only(bottom: 20),
@@ -453,7 +585,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
-            // 4. Notification Preferences
+            // 5. Notification Preferences
             Container(
               padding: const EdgeInsets.all(18),
               margin: const EdgeInsets.only(bottom: 20),
@@ -517,7 +649,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
-            // Export My Data Section
+            // 6. Export My Data Section
             Container(
               padding: const EdgeInsets.all(18),
               margin: const EdgeInsets.only(bottom: 20),
@@ -572,7 +704,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
-            // 6. Delete Account / Data
+            // 7. Delete Account / Data
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
