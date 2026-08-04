@@ -31,6 +31,5 @@ jobs:
         with:
           name: appium-mobile-test-reports
           path: |
-            BodyLanguageAppium/reports/Appium_Mobile_E2E_Test_Report.xlsx
-            BodyLanguageAppium/reports/execution-report.html
             reports/Appium_Mobile_E2E_Test_Report.xlsx
+            reports/execution-report.html

@@ -1,6 +1,7 @@
 const XlsxReporter = require('./xlsxReporter');
 const generateHtmlReport = require('./generateHtmlReport');
 const path = require('path');
+const fs = require('fs');
 
 async function createFallbackReport() {
   console.log('[generateFallbackReport] Generating fallback Appium report for CI artifact dependency...');
@@ -36,7 +37,19 @@ async function createFallbackReport() {
   const htmlPath = path.resolve(__dirname, '../reports/execution-report.html');
   generateHtmlReport(reporter.results, htmlPath);
 
-  console.log('[generateFallbackReport] Fallback report compilation complete.');
+  // Copy directly to root reports directory so artifact downloads contain only reports/
+  const rootReportsDir = path.resolve(__dirname, '../../reports');
+  if (!fs.existsSync(rootReportsDir)) {
+    fs.mkdirSync(rootReportsDir, { recursive: true });
+  }
+
+  const rootExcel = path.join(rootReportsDir, 'Appium_Mobile_E2E_Test_Report.xlsx');
+  const rootHtml = path.join(rootReportsDir, 'execution-report.html');
+
+  fs.copyFileSync(reportPath, rootExcel);
+  fs.copyFileSync(htmlPath, rootHtml);
+
+  console.log(`[generateFallbackReport] Reports successfully synchronized to root reports folder:\n => ${rootExcel}\n => ${rootHtml}`);
 }
 
 if (require.main === module) {

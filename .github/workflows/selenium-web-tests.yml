@@ -56,5 +56,5 @@ jobs:
         with:
           name: selenium-web-test-reports
           path: |
-            testing/reports/Selenium_Web_E2E_Test_Report.xlsx
-            testing/reports/Master_E2E_Analysis_Report.xlsx
+            reports/Selenium_Web_E2E_Test_Report.xlsx
+            reports/Master_E2E_Analysis_Report.xlsx
