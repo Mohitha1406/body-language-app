@@ -44,10 +44,14 @@ class MasterExcelReporter {
     const passRate = totalTests > 0 ? ((passedTests / totalTests) * 100).toFixed(2) + '%' : '0%';
     const totalDuration = this.allResults.reduce((acc, r) => acc + r.durationMs, 0);
 
-    const unitCount = this.allResults.filter(r => r.category === 'Unit').length;
-    const valCount = this.allResults.filter(r => r.category === 'Validation').length;
-    const funcCount = this.allResults.filter(r => r.category === 'Functional').length;
-    const uiCount = this.allResults.filter(r => r.category === 'UI/UX').length;
+    const categoryMap = {};
+    this.allResults.forEach(r => {
+      const cat = r.category || 'General';
+      if (!categoryMap[cat]) categoryMap[cat] = { total: 0, passed: 0, failed: 0 };
+      categoryMap[cat].total++;
+      if (r.status === 'PASS') categoryMap[cat].passed++;
+      else categoryMap[cat].failed++;
+    });
 
     // ----------------------------------------------------
     // Sheet 1: Master Executive Dashboard
@@ -63,7 +67,6 @@ class MasterExcelReporter {
 
     dashSheet.addRow([]);
 
-    // KPI Metrics Summary Table
     dashSheet.addRow(['KPI Metric Description', 'Metric Value']);
     const kpiHeader = dashSheet.getRow(4);
     kpiHeader.font = { bold: true, color: { argb: 'FFFFFF' } };
@@ -77,23 +80,13 @@ class MasterExcelReporter {
       ['Total Passed Test Cases', passedTests],
       ['Total Failed Test Cases', failedTests],
       ['Overall Test Suite Pass Rate', passRate],
-      ['Total Execution Duration', `${(totalDuration / 1000).toFixed(2)} seconds`],
-      ['--- CATEGORY BREAKDOWN ---', '--- COUNTS ---'],
-      ['Unit Test Cases (flutter test)', unitCount],
-      ['Validation Test Cases (Forms/Rules)', valCount],
-      ['Functional Test Cases (End-to-End)', funcCount],
-      ['UI/UX Test Cases (Aesthetics/Views)', uiCount],
-      ['--- DEPLOYABLE STATUS CHECK ---', '--- STATUS ---'],
-      ['Flutter Web Release Build (flutter build web --release)', this.deployableStatus.webReleaseBuild],
-      ['Flutter Android Release APK (flutter build apk --release)', this.deployableStatus.apkReleaseBuild]
+      ['Total Execution Duration', `${(totalDuration / 1000).toFixed(2)} seconds`]
     ];
 
     kpiRows.forEach(r => {
       const row = dashSheet.addRow(r);
       if (r[0] === 'Total Passed Test Cases') {
         row.getCell(2).font = { bold: true, color: { argb: '27AE60' } };
-      } else if (r[0].includes('Release')) {
-        row.getCell(2).font = { bold: true, color: { argb: '1A73E8' } };
       }
     });
 
@@ -148,11 +141,46 @@ class MasterExcelReporter {
 
     await workbook.xlsx.writeFile(this.reportFilePath);
 
-    // Sync copy to root reports directory if running inside testing directory
     const rootReportsDir = path.resolve(__dirname, '../../reports');
     if (fs.existsSync(rootReportsDir)) {
       const rootReportPath = path.join(rootReportsDir, path.basename(this.reportFilePath));
       fs.copyFileSync(this.reportFilePath, rootReportPath);
+    }
+
+    // Append Summary Table to GitHub Actions Step Summary UI
+    const summaryFile = process.env.GITHUB_STEP_SUMMARY;
+    if (summaryFile) {
+      let catRows = '';
+      Object.keys(categoryMap).forEach(cat => {
+        const c = categoryMap[cat];
+        const rate = ((c.passed / c.total) * 100).toFixed(2) + '%';
+        catRows += `| **${cat}** | ${c.total} | ${c.passed} | ${c.failed} | ${rate} |\n`;
+      });
+
+      const markdown = `
+## 🌐 Selenium Web E2E Test Execution Summary
+
+| KPI Metric Description | Metric Value |
+| :--- | :--- |
+| 🧪 **Total Test Cases Executed** | **${totalTests}** |
+| ✅ **Total Passed Test Cases** | **${passedTests}** |
+| ❌ **Total Failed Test Cases** | **${failedTests}** |
+| 📈 **Overall Pass Rate** | **${passRate}** |
+| 🕒 **Execution Timestamp** | ${new Date().toUTCString()} |
+
+### 📊 Web Test Category Breakdown
+
+| Category Name | Total Executed | Passed | Failed | Category Pass Rate |
+| :--- | :--- | :--- | :--- | :--- |
+${catRows}
+
+---
+> 📥 **Artifacts Ready for Download**: Download \`Selenium_Web_E2E_Test_Report.xlsx\` and \`Master_E2E_Analysis_Report.xlsx\` below.
+`;
+
+      try {
+        fs.appendFileSync(summaryFile, markdown, 'utf-8');
+      } catch (e) {}
     }
 
     console.log(`\n================================================================`);
