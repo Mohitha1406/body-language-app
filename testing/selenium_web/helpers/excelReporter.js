@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 class ExcelReporter {
-  constructor(reportFilePath) {
+  constructor(reportFilePath = './reports/Selenium_Web_E2E_Test_Report.xlsx') {
     this.reportFilePath = reportFilePath;
     this.testResults = [];
     this.startTime = new Date();
@@ -32,14 +32,13 @@ class ExcelReporter {
     const passedTests = this.testResults.filter(r => r.status === 'PASS').length;
     const failedTests = this.testResults.filter(r => r.status === 'FAIL').length;
     const passRate = totalTests > 0 ? ((passedTests / totalTests) * 100).toFixed(2) + '%' : '0%';
-    const totalDuration = this.testResults.reduce((acc, r) => acc + r.durationMs, 0);
+    const totalDuration = this.testResults.reduce((acc, r) => acc + (r.durationMs || 0), 0);
 
     // ----------------------------------------------------
     // Sheet 1: Dashboard Summary
     // ----------------------------------------------------
     const summarySheet = workbook.addWorksheet('Test Execution Summary');
 
-    // Title Header
     summarySheet.mergeCells('A1:E2');
     const titleCell = summarySheet.getCell('A1');
     titleCell.value = 'ConfidAI Web E2E Selenium Test Analysis Report';
@@ -49,7 +48,6 @@ class ExcelReporter {
 
     summarySheet.addRow([]);
 
-    // KPI Summary Table
     const kpiRows = [
       ['Execution Date', new Date().toLocaleString()],
       ['Total Test Cases Executed', totalTests],
@@ -84,9 +82,9 @@ class ExcelReporter {
     const detailSheet = workbook.addWorksheet('Detailed Test Cases');
 
     detailSheet.columns = [
-      { header: 'Suite Name', key: 'suite', width: 25 },
+      { header: 'Suite Name', key: 'suite', width: 30 },
       { header: 'Test ID', key: 'testId', width: 15 },
-      { header: 'Test Description', key: 'title', width: 45 },
+      { header: 'Test Description', key: 'title', width: 55 },
       { header: 'Category', key: 'category', width: 15 },
       { header: 'Status', key: 'status', width: 12 },
       { header: 'Duration (ms)', key: 'durationMs', width: 15 },
@@ -95,7 +93,6 @@ class ExcelReporter {
       { header: 'Notes / Context', key: 'notes', width: 35 }
     ];
 
-    // Header styling
     const headerRow = detailSheet.getRow(1);
     headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11 };
     headerRow.height = 26;
@@ -104,7 +101,6 @@ class ExcelReporter {
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
 
-    // Add Rows
     this.testResults.forEach(res => {
       const row = detailSheet.addRow(res);
       row.height = 20;
@@ -122,7 +118,6 @@ class ExcelReporter {
       }
     });
 
-    // Ensure output directory exists
     const dir = path.dirname(this.reportFilePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -130,14 +125,15 @@ class ExcelReporter {
 
     await workbook.xlsx.writeFile(this.reportFilePath);
 
-    // Sync copy to root reports directory if running inside testing directory
+    // Sync copy to root reports directory
     const rootReportsDir = path.resolve(__dirname, '../../../reports');
-    if (fs.existsSync(rootReportsDir)) {
-      const rootReportPath = path.join(rootReportsDir, path.basename(this.reportFilePath));
-      fs.copyFileSync(this.reportFilePath, rootReportPath);
+    if (!fs.existsSync(rootReportsDir)) {
+      fs.mkdirSync(rootReportsDir, { recursive: true });
     }
+    const rootReportPath = path.join(rootReportsDir, path.basename(this.reportFilePath));
+    fs.copyFileSync(this.reportFilePath, rootReportPath);
 
-    console.log(`\n[ExcelReporter] E2E Excel Analysis Report successfully generated at:\n => ${path.resolve(this.reportFilePath)}\n`);
+    console.log(`\n[ExcelReporter] E2E Excel Analysis Report successfully generated (${totalTests} Test Cases) at:\n => ${path.resolve(this.reportFilePath)}\n`);
   }
 }
 
