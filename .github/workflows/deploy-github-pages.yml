@@ -8,9 +8,18 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   deploy-github-pages:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
 
     steps:
@@ -27,7 +36,17 @@ jobs:
           flutter pub get
           flutter build web --release --base-href "/body-language-app/"
 
-      - name: Deploy Flutter Web Build to gh-pages Branch
+      - name: Upload Artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./build/web
+
+      - name: Deploy to GitHub Pages (Official Actions)
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Push Build to gh-pages Branch (Branch Deployment)
+        if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
