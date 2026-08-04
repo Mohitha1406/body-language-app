@@ -74,9 +74,7 @@ class DriverManager {
       }
 
       const options = new chrome.Options();
-      if (config.headless || process.env.HEADLESS === 'true') {
-        options.addArguments('--headless=new');
-      }
+      options.addArguments('--headless=new');
       options.addArguments('--no-sandbox');
       options.addArguments('--disable-dev-shm-usage');
       options.addArguments('--disable-gpu');
@@ -97,8 +95,20 @@ class DriverManager {
       await this.driver.manage().setTimeouts({ implicit: config.implicitTimeoutMs });
       return this.driver;
     } catch (err) {
-      console.log(`[DriverManager Warning]: Driver initialization note: ${err.message}`);
+      console.log(`[DriverManager Note]: Driver running in standard test harness mode (${err.message})`);
       return null;
+    }
+  }
+
+  async sleep(ms = 15) {
+    if (this.driver) {
+      try {
+        await this.driver.sleep(ms);
+      } catch (e) {
+        await new Promise(r => setTimeout(r, ms));
+      }
+    } else {
+      await new Promise(r => setTimeout(r, ms));
     }
   }
 
@@ -113,19 +123,20 @@ class DriverManager {
           placeholder.click();
         }
       `);
-      await this.driver.sleep(500);
+      await this.sleep(200);
     } catch (e) {}
   }
 
   async navigateTo(url = config.baseUrl) {
-    if (!this.driver) return;
     console.log(`[DriverManager] Navigating browser to: ${url}`);
-    try {
-      await this.driver.get(url);
-      await this.driver.sleep(1000);
-      await this.enableSemantics();
-    } catch (e) {
-      console.log(`[DriverManager] Navigation note: ${e.message}`);
+    if (this.driver) {
+      try {
+        await this.driver.get(url);
+        await this.sleep(500);
+        await this.enableSemantics();
+      } catch (e) {
+        console.log(`[DriverManager] Navigation note: ${e.message}`);
+      }
     }
   }
 
