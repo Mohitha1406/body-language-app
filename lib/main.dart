@@ -34,9 +34,9 @@ void main() async {
     SemanticsBinding.instance.ensureSemantics();
   }
   await Supabase.initialize(
-    url: 'https://bymsesfomceglnmxsxtz.supabase.co',
+    url: 'https://ytnidlfsaqfcftwpajmd.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5bXNlc2ZvbWNlZ2xubXhzeHR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTY5MTUsImV4cCI6MjA5MzU3MjkxNX0.L0bpy3N5Uxt5geqftgvW-K9YpwAAv0n7SxbknRnjE-o',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0bmlkbGZzYXFmY2Z0d3Bham1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxMjA0NjIsImV4cCI6MjEwMDY5NjQ2Mn0.LMiANZn4d8w7B8RS02JUJSklHMDTgV15zXXDrTPuvBc',
   );
   final prefs = await SharedPreferences.getInstance();
   final isLoggedIn = prefs.getBool('is_logged_in') ?? false;

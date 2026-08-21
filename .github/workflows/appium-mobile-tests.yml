@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run Appium Mobile E2E Automation & Generate Reports (1,111 Tests)
+      - name: Run Appium Mobile E2E Automation & Generate Reports (300 Tests)
         run: |
           cd BodyLanguageAppium
           npm install

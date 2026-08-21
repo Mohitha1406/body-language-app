@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 
 describe('Body Language Appium Mobile E2E Master Suite (300 Tests)', function () {
-  this.timeout(1800000); // 30 minutes timeout for mega suite
+  this.timeout(1800000); // 30 minutes timeout for master suite
 
   const categories = [
     { name: 'Navigation & Camera', prefix: 'TC-MOB-NAV', title: 'Appium Mobile Navigation & Camera Suite', count: 50 },
@@ -58,4 +58,3 @@ describe('Body Language Appium Mobile E2E Master Suite (300 Tests)', function ()
     });
   });
 });
-

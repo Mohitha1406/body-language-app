@@ -43,7 +43,7 @@ if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
   echo "⚠️ [Appium Warning] Appium server port check timed out, proceeding with WDIO fallback runner..."
 fi
 
-echo "[WDIO] Executing Appium Mobile Spec Suite (1,111 Tests)..."
+echo "[WDIO] Executing Appium Mobile Spec Suite (300 Tests)..."
 cd "$(dirname "$0")/.."
 
 if npm run test:mobile; then

@@ -112,7 +112,7 @@ function generateHtmlReport(results = [], outputPath = './reports/execution-repo
 <body>
   <div class="header">
     <h1>📱 Body Language Appium Mobile E2E Analysis Report</h1>
-    <p style="color: var(--text-muted);">Generated on ${new Date().toLocaleString()} | Executed 1,111 Mobile Tests</p>
+    <p style="color: var(--text-muted);">Generated on ${new Date().toLocaleString()} | Executed 300 Mobile Tests</p>
   </div>
 
   <div class="kpi-grid">

@@ -1,7 +1,7 @@
 {
   "name": "body-language-appium-mobile-testing",
   "version": "1.0.0",
-  "description": "Appium Mobile E2E Test Suite for Body Language Android App (1,111 Test Cases)",
+  "description": "Appium Mobile E2E Test Suite for Body Language Android App (300 Test Cases)",
   "main": "wdio.conf.js",
   "scripts": {
     "test:mobile": "wdio run wdio.conf.js"
@@ -13,7 +13,7 @@
     "android",
     "flutter",
     "excel-report",
-    "1111-test-cases"
+    "300-test-cases"
   ],
   "author": "QA Team",
   "license": "ISC",
